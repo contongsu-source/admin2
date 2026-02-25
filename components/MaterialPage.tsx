@@ -11,7 +11,7 @@ interface MaterialPageProps {
 export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriodId = currentProject?.currentPeriodId || '';
-  const materials = (state.materials[currentPeriodId] || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const materials = state.materials[currentPeriodId] || [];
   const [showForm, setShowForm] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<Partial<MaterialItem>>({

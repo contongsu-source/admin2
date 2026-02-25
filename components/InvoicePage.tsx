@@ -10,7 +10,7 @@ interface InvoicePageProps {
 export const InvoicePage: React.FC<InvoicePageProps> = ({ state }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
-  const materials = state.materials[currentPeriod?.id || ''] || [];
+  const materials = state.materials[state.currentProjectId] || [];
   const records = state.attendance[currentPeriod?.id || ''] || [];
   const { companyProfile } = state;
 

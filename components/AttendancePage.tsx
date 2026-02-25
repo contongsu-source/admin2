@@ -431,7 +431,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                     <QrCode className="w-10 h-10 text-brand-600 dark:text-brand-400" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Absensi QR Code</h3>
-                <p className="text-gray-500 dark:text-gray-400 mt-2">Gunakan Kamera atau input manual ID</p>
+                <p className="text-gray-500 dark:text-gray-400 mt-2">Gunakan Kamera HP atau input manual ID</p>
             </div>
 
             {/* Camera Area */}
@@ -451,7 +451,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                     className="mb-10 bg-brand-600 text-white px-8 py-4 rounded-xl font-bold shadow-xl shadow-brand-600/30 hover:bg-brand-700 transition-all flex items-center gap-3 mx-auto transform hover:scale-105"
                 >
                     <Smartphone className="w-6 h-6" />
-                    Buka Kamera
+                    Buka Kamera HP
                 </button>
             )}
 
@@ -567,9 +567,9 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
             <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs font-bold">
                 <tr>
-                    <th className="hidden md:table-cell px-4 py-4 sticky left-0 bg-gray-50 dark:bg-gray-800 z-20 w-12 text-center shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">No</th>
-                    <th className="px-4 py-4 sticky left-0 md:left-12 bg-gray-50 dark:bg-gray-800 z-20 w-32 md:w-48 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">Nama</th>
-                    <th className="hidden md:table-cell px-4 py-4 sticky left-60 bg-gray-50 dark:bg-gray-800 z-20 w-24 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Jabatan</th>
+                    <th className="px-4 py-4 sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 w-12 text-center shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">No</th>
+                    <th className="px-4 py-4 sticky left-12 bg-gray-50 dark:bg-gray-800 z-10 w-48 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">Nama</th>
+                    <th className="px-4 py-4 sticky left-60 bg-gray-50 dark:bg-gray-800 z-10 w-24 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Jabatan</th>
                     {dates.map((d) => (
                         <th key={d.toISOString()} className={`px-2 py-4 text-center min-w-[60px] border-l border-gray-200 dark:border-gray-700 ${d.toISOString().split('T')[0] === todayStr ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}`}>
                             <div className="flex flex-col">
@@ -648,12 +648,9 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
 
                         return (
                             <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                <td className="hidden md:table-cell px-4 py-3 sticky left-0 bg-white dark:bg-gray-800 text-center font-bold text-gray-400 dark:text-gray-500 align-middle shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] z-10">{idx + 1}</td>
-                                <td className="px-4 py-3 sticky left-0 md:left-12 bg-white dark:bg-gray-800 font-bold text-gray-800 dark:text-gray-100 align-middle shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] z-10">
-                                    <div className="truncate w-24 md:w-auto">{emp.name}</div>
-                                    <div className="md:hidden text-[10px] text-gray-400 font-normal truncate w-24">{emp.position}</div>
-                                </td>
-                                <td className="hidden md:table-cell px-4 py-3 sticky left-60 bg-white dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 font-medium align-middle shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10">{emp.position}</td>
+                                <td className="px-4 py-3 sticky left-0 bg-white dark:bg-gray-800 text-center font-bold text-gray-400 dark:text-gray-500 align-middle shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">{idx + 1}</td>
+                                <td className="px-4 py-3 sticky left-12 bg-white dark:bg-gray-800 font-bold text-gray-800 dark:text-gray-100 align-middle shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">{emp.name}</td>
+                                <td className="px-4 py-3 sticky left-60 bg-white dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 font-medium align-middle shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{emp.position}</td>
                                 {dateCells}
                                 <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-white border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 align-middle">{totalPresence}</td>
                                 <td className="px-4 py-3 text-center font-bold text-orange-600 dark:text-orange-400 border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 align-middle">{totalOvertime > 0 ? `${totalOvertime}j` : '-'}</td>

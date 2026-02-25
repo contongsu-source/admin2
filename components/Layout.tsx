@@ -32,25 +32,25 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
       
       <div className="flex-1 flex flex-col min-h-screen md:ml-72 transition-all duration-300 w-full">
         {/* Top Header */}
-        <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-auto min-h-[4rem] md:h-20 flex flex-wrap md:flex-nowrap items-center justify-between px-4 py-3 md:px-8 sticky top-0 z-20 no-print transition-colors duration-200 gap-3">
-          <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 w-full md:w-auto">
+        <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-16 md:h-20 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20 no-print transition-colors duration-200">
+          <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl active:scale-95 transition-transform shrink-0"
+              className="md:hidden p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl active:scale-95 transition-transform"
             >
               <Menu className="w-6 h-6" />
             </button>
 
             {/* Project Selector Container */}
-            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 flex-1 min-w-0">
-              <span className="hidden md:inline text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 shrink-0">Proyek Aktif</span>
+            <div className="flex flex-col md:flex-row md:items-center gap-0.5 md:gap-3 flex-1 min-w-0">
+              <span className="hidden md:inline text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Proyek Aktif</span>
               
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full max-w-full">
-                  <div className="relative flex-1 w-full sm:w-auto group">
+              <div className="flex items-center gap-2 max-w-full">
+                  <div className="relative flex-1 md:flex-none group">
                     <select 
                       value={state.currentProjectId}
                       onChange={(e) => onProjectChange(e.target.value)}
-                      className="appearance-none w-full bg-gray-100 dark:bg-gray-700/50 border-0 text-gray-900 dark:text-white text-sm font-semibold rounded-lg pl-3 pr-8 py-2 focus:ring-2 focus:ring-brand-500 cursor-pointer transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 truncate"
+                      className="appearance-none w-full md:w-auto bg-gray-100 dark:bg-gray-700/50 border-0 text-gray-900 dark:text-white text-sm font-semibold rounded-lg pl-3 pr-8 py-2 focus:ring-2 focus:ring-brand-500 cursor-pointer transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
                     >
                       {state.projects.map(p => (
                         <option key={p.id} value={p.id}>{p.name}</option>
@@ -60,17 +60,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                   </div>
                   
                   {state.currentProjectId && projectPeriods.length > 0 && (
-                      <div className="relative group w-full sm:w-auto">
+                      <div className="relative group">
                         <select 
                           value={currentProject?.currentPeriodId}
                           onChange={(e) => onPeriodChange(state.currentProjectId, e.target.value)}
-                          className="appearance-none w-full sm:w-auto bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800/50 text-brand-600 dark:text-brand-400 text-xs font-medium rounded-md pl-3 pr-8 py-2 focus:ring-1 focus:ring-brand-500 cursor-pointer transition-colors hover:bg-brand-100 dark:hover:bg-brand-900/50 truncate"
+                          className="appearance-none bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800/50 text-brand-600 dark:text-brand-400 text-[10px] md:text-xs font-medium rounded-md pl-2 pr-6 py-1 focus:ring-1 focus:ring-brand-500 cursor-pointer transition-colors hover:bg-brand-100 dark:hover:bg-brand-900/50"
                         >
                           {projectPeriods.map(per => (
                             <option key={per.id} value={per.id}>{per.name}</option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-500 pointer-events-none" />
+                        <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-500 pointer-events-none" />
                       </div>
                   )}
               </div>
@@ -78,10 +78,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 md:gap-4 shrink-0 ml-auto md:ml-3">
+          <div className="flex items-center gap-2 md:gap-4 ml-3 shrink-0">
              <button 
                onClick={onToggleTheme}
-               className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-all active:scale-95"
+               className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-all active:scale-95"
                title={isDarkMode ? "Mode Terang" : "Mode Gelap"}
              >
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -94,7 +94,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online
                      </span>
                  </div>
-                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 shadow-md shadow-brand-500/30 flex items-center justify-center text-white font-bold text-xs md:text-sm ring-2 ring-white dark:ring-gray-800">
+                 <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 shadow-md shadow-brand-500/30 flex items-center justify-center text-white font-bold text-sm ring-2 ring-white dark:ring-gray-800">
                     EK
                  </div>
              </div>

@@ -238,7 +238,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
               <div>
                 <h3 className="text-lg font-bold">Sinkronisasi Antar Perangkat</h3>
-                <p className="text-blue-100 text-sm">Akses data yang sama di perangkat lain</p>
+                <p className="text-blue-100 text-sm">Akses data yang sama di PC dan HP</p>
               </div>
           </div>
 
@@ -327,7 +327,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
                   <h4 className="font-semibold mb-2 text-sm uppercase tracking-wider text-purple-200">Download Data (Backup)</h4>
                   <p className="text-xs text-purple-100 mb-4">
-                      Unduh semua data aplikasi saat ini ke dalam file JSON untuk disimpan di perangkat Anda.
+                      Unduh semua data aplikasi saat ini ke dalam file JSON untuk disimpan di komputer/HP Anda.
                   </p>
                   <button 
                     onClick={handleBackup}

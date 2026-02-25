@@ -150,58 +150,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       </div>
 
       <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden ${printMode === 'slips' ? 'no-print' : ''} ${printMode === 'recap' ? 'print:border-black print:shadow-none' : ''}`}>
-        
-        {/* MOBILE CARD VIEW */}
-        <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
-            {payrollData.length === 0 && (
-                <div className="p-8 text-center text-gray-500 italic">Belum ada karyawan di proyek ini.</div>
-            )}
-            {payrollData.map((row) => (
-                <div key={row.emp.id} className="p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h4 className="font-bold text-gray-900 dark:text-white">{row.emp.name}</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{row.emp.position}</p>
-                        </div>
-                        <div className="text-right">
-                             <span className="text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-lg">
-                                {row.workDays} Hari
-                             </span>
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg">
-                            <p className="text-[10px] text-gray-400 uppercase font-bold">Gaji Pokok</p>
-                            <p className="font-medium dark:text-gray-200">{row.basicSalary.toLocaleString('id-ID')}</p>
-                        </div>
-                        <div className="bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg">
-                            <p className="text-[10px] text-gray-400 uppercase font-bold">Lembur ({row.overtimeHours}j)</p>
-                            <p className="font-medium dark:text-gray-200">{row.overtimeSalary > 0 ? row.overtimeSalary.toLocaleString('id-ID') : '-'}</p>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-100 dark:border-gray-700">
-                        <div className="flex gap-2">
-                             <button 
-                                onClick={() => downloadSlip(row.emp.id)}
-                                className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200"
-                                title="Download Slip"
-                            >
-                                <Download className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xs text-gray-400 uppercase font-bold">Total Terima</p>
-                            <p className="text-lg font-bold text-brand-600 dark:text-brand-400">Rp {row.totalSalary.toLocaleString('id-ID')}</p>
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-
-        {/* DESKTOP TABLE VIEW */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-xs font-semibold print:bg-gray-200 print:text-black">
                     <tr>
