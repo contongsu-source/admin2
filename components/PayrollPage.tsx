@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { AppState, Employee, DailyAttendance } from '../types';
 import { Download, Printer, Edit2, Save, FileText } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { toJpeg } from 'html-to-image';
 import { terbilang } from '../utils';
 
 interface PayrollPageProps {
@@ -24,14 +24,14 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
     if (!element) return;
 
     try {
-        const canvas = await html2canvas(element, {
-            backgroundColor: '#ffffff',
-            scale: 2 // Higher quality
+        const dataUrl = await toJpeg(element, {
+            quality: 0.95,
+            backgroundColor: '#ffffff'
         });
         
         const link = document.createElement('a');
         link.download = `Slip_Gaji_${state.employees.find(e=>e.id===empId)?.name}.jpg`;
-        link.href = canvas.toDataURL('image/jpeg', 0.9);
+        link.href = dataUrl;
         link.click();
     } catch (err) {
         console.error("Error generating slip", err);
@@ -62,10 +62,11 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       }
   };
 
-  // Filter employees for the current project
-  const projectEmployees = state.employees.filter(e => e.projectId === state.currentProjectId);
+  // Filter employees for the current project who have attendance records in the current period
+  const periodEmployeeIds = new Set(records.map(r => r.employeeId));
+  const periodEmployees = state.employees.filter(e => periodEmployeeIds.has(e.id));
 
-  const payrollData = projectEmployees.map(emp => {
+  const payrollData = periodEmployees.map(emp => {
     const record = records.find(r => r.employeeId === emp.id);
     
     let workDays = 0;
@@ -225,67 +226,67 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                                 
                                 {/* Hidden Slip Template for Rendering JPG only (Hidden from Print) */}
                                 <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none no-print">
-                                    <div id={`slip-${row.emp.id}`} className="w-[600px] bg-white p-8 border border-gray-900 text-slate-900">
-                                        {/* Same template as below, but for html2canvas targeting */}
-                                         <div className="border-b-2 border-gray-900 pb-4 mb-4 flex justify-between items-center">
+                                    <div id={`slip-${row.emp.id}`} className="w-[600px] bg-white p-8 border-2" style={{ borderColor: '#111827', color: '#0f172a' }}>
+                                        {/* Same template as below, but for html-to-image targeting */}
+                                         <div className="border-b-2 pb-4 mb-4 flex justify-between items-center" style={{ borderColor: '#111827' }}>
                                             <div>
                                                 <h1 className="text-2xl font-bold uppercase tracking-wider">Slip Gaji</h1>
-                                                <p className="text-sm font-bold text-gray-600">{state.companyProfile.name}</p>
+                                                <p className="text-sm font-bold" style={{ color: '#4b5563' }}>{state.companyProfile.name}</p>
                                             </div>
                                             <div className="text-right text-xs">
-                                                <p>{currentPeriod?.name}</p>
+                                                <p className="font-bold">{currentPeriod?.name}</p>
                                                 <p>{state.companyProfile.city}, {new Date().toLocaleDateString('id-ID')}</p>
                                             </div>
                                         </div>
                                         {/* ... (simplified body for JPG generator reuse logic) ... */}
                                         <div className="mb-6 grid grid-cols-2 gap-4 text-sm">
                                             <div>
-                                                <p className="text-gray-500 text-xs uppercase">Nama Karyawan</p>
+                                                <p className="text-xs uppercase" style={{ color: '#6b7280' }}>Nama Karyawan</p>
                                                 <p className="font-bold text-lg">{row.emp.name}</p>
-                                                <p className="text-gray-600">{row.emp.position}</p>
+                                                <p style={{ color: '#4b5563' }}>{row.emp.position}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-gray-500 text-xs uppercase">Project</p>
+                                                <p className="text-xs uppercase" style={{ color: '#6b7280' }}>Project</p>
                                                 <p className="font-medium">{currentProject?.name}</p>
                                             </div>
                                         </div>
-                                        <table className="w-full text-sm mb-6 border border-gray-300">
-                                            <thead className="bg-gray-100">
+                                        <table className="w-full text-sm mb-6 border" style={{ borderColor: '#d1d5db' }}>
+                                            <thead style={{ backgroundColor: '#f3f4f6' }}>
                                                 <tr>
-                                                    <th className="p-2 text-left border-r border-gray-300">Deskripsi</th>
-                                                    <th className="p-2 text-center border-r border-gray-300">Unit</th>
-                                                    <th className="p-2 text-right border-r border-gray-300">Rate</th>
+                                                    <th className="p-2 text-left border-r" style={{ borderColor: '#d1d5db' }}>Deskripsi</th>
+                                                    <th className="p-2 text-center border-r" style={{ borderColor: '#d1d5db' }}>Unit</th>
+                                                    <th className="p-2 text-right border-r" style={{ borderColor: '#d1d5db' }}>Rate</th>
                                                     <th className="p-2 text-right">Jumlah</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr className="border-b border-gray-300">
-                                                    <td className="p-2 border-r border-gray-300">Gaji Pokok</td>
-                                                    <td className="p-2 text-center border-r border-gray-300">{row.workDays} Hari</td>
-                                                    <td className="p-2 text-right border-r border-gray-300">{row.emp.dailyRate.toLocaleString('id-ID')}</td>
+                                                <tr className="border-b" style={{ borderColor: '#d1d5db' }}>
+                                                    <td className="p-2 border-r" style={{ borderColor: '#d1d5db' }}>Gaji Pokok</td>
+                                                    <td className="p-2 text-center border-r" style={{ borderColor: '#d1d5db' }}>{row.workDays} Hari</td>
+                                                    <td className="p-2 text-right border-r" style={{ borderColor: '#d1d5db' }}>{row.emp.dailyRate.toLocaleString('id-ID')}</td>
                                                     <td className="p-2 text-right font-medium">{row.basicSalary.toLocaleString('id-ID')}</td>
                                                 </tr>
                                                 {row.overtimeHours > 0 && (
-                                                    <tr className="border-b border-gray-300">
-                                                        <td className="p-2 border-r border-gray-300">Lembur (Overtime)</td>
-                                                        <td className="p-2 text-center border-r border-gray-300">{row.overtimeHours} Jam</td>
-                                                        <td className="p-2 text-right border-r border-gray-300">{row.emp.overtimeRate.toLocaleString('id-ID')}</td>
+                                                    <tr className="border-b" style={{ borderColor: '#d1d5db' }}>
+                                                        <td className="p-2 border-r" style={{ borderColor: '#d1d5db' }}>Lembur (Overtime)</td>
+                                                        <td className="p-2 text-center border-r" style={{ borderColor: '#d1d5db' }}>{row.overtimeHours} Jam</td>
+                                                        <td className="p-2 text-right border-r" style={{ borderColor: '#d1d5db' }}>{row.emp.overtimeRate.toLocaleString('id-ID')}</td>
                                                         <td className="p-2 text-right font-medium">{row.overtimeSalary.toLocaleString('id-ID')}</td>
                                                     </tr>
                                                 )}
                                             </tbody>
                                         </table>
-                                         <div className="bg-gray-100 p-2 italic text-gray-700 text-xs mb-4 border-l-2 border-gray-800">
+                                         <div className="p-2 italic text-xs mb-4 border-l-2" style={{ backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#1f2937' }}>
                                             Terbilang: # {terbilang(row.totalSalary)} rupiah #
                                         </div>
-                                        <div className="flex justify-between items-center pt-4 border-t-2 border-gray-900">
-                                            <div className="text-sm italic text-gray-500">
+                                        <div className="flex justify-between items-center pt-4 border-t-2" style={{ borderColor: '#111827' }}>
+                                            <div className="text-sm italic text-center" style={{ color: '#6b7280' }}>
                                                 Diterima oleh, <br/><br/><br/>
                                                 ({row.emp.name})
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm text-gray-500 uppercase font-bold">Total Diterima</p>
-                                                <p className="text-3xl font-bold text-gray-900">Rp {row.totalSalary.toLocaleString('id-ID')}</p>
+                                                <p className="text-sm uppercase font-bold" style={{ color: '#6b7280' }}>Total Diterima</p>
+                                                <p className="text-3xl font-bold" style={{ color: '#111827' }}>Rp {row.totalSalary.toLocaleString('id-ID')}</p>
                                             </div>
                                         </div>
                                     </div>

@@ -10,15 +10,32 @@ interface AttendancePageProps {
   onAddEmployee: (emp: Omit<Employee, 'id' | 'projectId'>) => void;
   onUpdateEmployee: (emp: Employee) => void;
   onDeleteEmployee: (id: string) => void;
+  onRemoveFromPeriod: (empId: string, periodId: string) => void;
+  onAddToPeriod: (empId: string, periodId: string) => void;
 }
 
-export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate, onAddEmployee, onUpdateEmployee, onDeleteEmployee }) => {
+export const AttendancePage: React.FC<AttendancePageProps> = ({ 
+  state, 
+  onUpdate, 
+  onAddEmployee, 
+  onUpdateEmployee, 
+  onDeleteEmployee,
+  onRemoveFromPeriod,
+  onAddToPeriod
+}) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
   const records = state.attendance[currentPeriod?.id || ''] || [];
 
-  // FILTER EMPLOYEES BY CURRENT PROJECT
+  // EMPLOYEES IN THIS PERIOD (those who have attendance records)
+  const periodEmployeeIds = new Set(records.map(r => r.employeeId));
+  const periodEmployees = state.employees.filter(e => periodEmployeeIds.has(e.id));
+
+  // ALL EMPLOYEES IN THIS PROJECT
   const projectEmployees = state.employees.filter(e => e.projectId === state.currentProjectId);
+  
+  // EMPLOYEES IN PROJECT BUT NOT IN THIS PERIOD
+  const availableEmployees = projectEmployees.filter(e => !periodEmployeeIds.has(e.id));
 
   const [isEditing, setIsEditing] = useState(false);
   const [showEmpManager, setShowEmpManager] = useState(false); // Modal state
@@ -299,49 +316,77 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                   
                   <div className="p-6 overflow-y-auto flex-1 dark:text-gray-200">
                       {/* Add New Form */}
-                      <form onSubmit={submitNewEmployee} className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl mb-8 border border-blue-100 dark:border-blue-800/30">
-                          <h4 className="font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
-                              <div className="bg-blue-600 text-white p-1 rounded-md">
-                                <Plus className="w-3 h-3" />
-                              </div>
-                              Tambah Karyawan Baru
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                              <div className="md:col-span-2">
-                                  <input 
-                                      type="text" 
-                                      placeholder="Nama Lengkap" 
-                                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                      value={newEmp.name}
-                                      onChange={e => setNewEmp({...newEmp, name: e.target.value})}
-                                      required
-                                  />
-                              </div>
-                              <div>
-                                  <input 
-                                      type="text" 
-                                      placeholder="Jabatan" 
-                                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                      value={newEmp.position}
-                                      onChange={e => setNewEmp({...newEmp, position: e.target.value})}
-                                      required
-                                  />
-                              </div>
-                              <div>
-                                  <input 
-                                      type="number" 
-                                      placeholder="Gaji/Hari" 
-                                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                      value={newEmp.dailyRate}
-                                      onChange={e => setNewEmp({...newEmp, dailyRate: parseInt(e.target.value) || 0})}
-                                      required
-                                  />
-                              </div>
-                              <button type="submit" className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
-                                  Simpan
-                              </button>
-                          </div>
-                      </form>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <form onSubmit={submitNewEmployee} className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                            <h4 className="font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
+                                <div className="bg-blue-600 text-white p-1 rounded-md">
+                                    <Plus className="w-3 h-3" />
+                                </div>
+                                Tambah Karyawan Baru ke Sistem
+                            </h4>
+                            <div className="space-y-3">
+                                <input 
+                                    type="text" 
+                                    placeholder="Nama Lengkap" 
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={newEmp.name}
+                                    onChange={e => setNewEmp({...newEmp, name: e.target.value})}
+                                    required
+                                />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Jabatan" 
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={newEmp.position}
+                                        onChange={e => setNewEmp({...newEmp, position: e.target.value})}
+                                        required
+                                    />
+                                    <input 
+                                        type="number" 
+                                        placeholder="Gaji/Hari" 
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={newEmp.dailyRate}
+                                        onChange={e => setNewEmp({...newEmp, dailyRate: parseInt(e.target.value) || 0})}
+                                        required
+                                    />
+                                </div>
+                                <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
+                                    Simpan & Tambah ke Periode
+                                </button>
+                            </div>
+                        </form>
+
+                        <div className="bg-green-50 dark:bg-green-900/10 p-5 rounded-xl border border-green-100 dark:border-green-800/30">
+                            <h4 className="font-bold text-green-900 dark:text-green-300 mb-4 flex items-center gap-2">
+                                <div className="bg-green-600 text-white p-1 rounded-md">
+                                    <Users className="w-3 h-3" />
+                                </div>
+                                Masukkan Karyawan Lama ke Periode Ini
+                            </h4>
+                            {availableEmployees.length === 0 ? (
+                                <p className="text-xs text-gray-500 italic py-4">Semua karyawan proyek sudah ada di periode ini.</p>
+                            ) : (
+                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                    {availableEmployees.map(emp => (
+                                        <div key={emp.id} className="flex items-center justify-between bg-white dark:bg-gray-700 p-2 rounded-lg border border-gray-200 dark:border-gray-600">
+                                            <div>
+                                                <p className="text-sm font-bold dark:text-white">{emp.name}</p>
+                                                <p className="text-[10px] text-gray-500">{emp.position}</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => currentPeriod && onAddToPeriod(emp.id, currentPeriod.id)}
+                                                className="bg-green-600 text-white p-1.5 rounded-lg hover:bg-green-700 transition-colors"
+                                                title="Tambah ke Periode Ini"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                      </div>
 
                       {/* Excel Import */}
                       <div className="mb-6 p-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
@@ -359,23 +404,26 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                       </div>
 
                       {/* List */}
-                      <table className="w-full text-sm">
+                      <div className="mb-2 flex items-center justify-between">
+                          <h4 className="font-bold text-gray-700 dark:text-gray-300">Karyawan di Periode Ini</h4>
+                          <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">{periodEmployees.length} Orang</span>
+                      </div>
+                      <table className="w-full text-sm mb-8">
                           <thead className="bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs rounded-lg">
                               <tr>
                                   <th className="px-4 py-3 text-left rounded-l-lg">Nama</th>
                                   <th className="px-4 py-3 text-left">Jabatan</th>
                                   <th className="px-4 py-3 text-right">Gaji/Hari</th>
-                                  <th className="px-4 py-3 text-right">Lembur/Jam</th>
                                   <th className="px-4 py-3 text-center rounded-r-lg">Aksi</th>
                               </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                              {projectEmployees.length === 0 && (
+                              {periodEmployees.length === 0 && (
                                   <tr>
-                                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">Belum ada karyawan di proyek ini.</td>
+                                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500 italic">Belum ada karyawan di periode ini.</td>
                                   </tr>
                               )}
-                              {projectEmployees.map(emp => (
+                              {periodEmployees.map(emp => (
                                   <tr key={emp.id} className="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                       {editingEmpId === emp.id ? (
                                           <>
@@ -396,7 +444,6 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                                                   />
                                               </td>
                                               <td className="px-4 py-3 text-right text-gray-400 text-xs">Edit di Menu Penggajian</td>
-                                              <td className="px-4 py-3 text-right text-gray-400 text-xs">Edit di Menu Penggajian</td>
                                               <td className="px-4 py-3 text-center flex justify-center gap-2">
                                                   <button onClick={saveEditEmployee} className="text-green-600 hover:text-green-800 bg-green-50 p-1 rounded hover:bg-green-100"><Save className="w-4 h-4"/></button>
                                                   <button onClick={() => setEditingEmpId(null)} className="text-gray-500 hover:text-gray-700 bg-gray-50 p-1 rounded hover:bg-gray-100"><X className="w-4 h-4"/></button>
@@ -407,10 +454,16 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                                               <td className="px-4 py-3 font-medium dark:text-white">{emp.name}</td>
                                               <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{emp.position}</td>
                                               <td className="px-4 py-3 text-right">{emp.dailyRate.toLocaleString('id-ID')}</td>
-                                              <td className="px-4 py-3 text-right">{emp.overtimeRate.toLocaleString('id-ID')}</td>
                                               <td className="px-4 py-3 text-center flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                  <button onClick={() => startEditEmployee(emp)} className="text-blue-600 hover:text-blue-800 bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-lg hover:bg-blue-100"><Edit2 className="w-4 h-4"/></button>
-                                                  <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/30 p-1.5 rounded-lg hover:bg-red-100"><Trash2 className="w-4 h-4"/></button>
+                                                  <button onClick={() => startEditEmployee(emp)} className="text-blue-600 hover:text-blue-800 bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-lg hover:bg-blue-100" title="Edit Data"><Edit2 className="w-4 h-4"/></button>
+                                                  <button 
+                                                    onClick={() => currentPeriod && onRemoveFromPeriod(emp.id, currentPeriod.id)} 
+                                                    className="text-orange-500 hover:text-orange-700 bg-orange-50 dark:bg-orange-900/30 p-1.5 rounded-lg hover:bg-orange-100"
+                                                    title="Hapus dari Periode Ini Saja"
+                                                  >
+                                                    <X className="w-4 h-4"/>
+                                                  </button>
+                                                  <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/30 p-1.5 rounded-lg hover:bg-red-100" title="Hapus Permanen dari Sistem"><Trash2 className="w-4 h-4"/></button>
                                               </td>
                                           </>
                                       )}
@@ -431,7 +484,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                     <QrCode className="w-10 h-10 text-brand-600 dark:text-brand-400" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Absensi QR Code</h3>
-                <p className="text-gray-500 dark:text-gray-400 mt-2">Gunakan Kamera HP atau input manual ID</p>
+                <p className="text-gray-500 dark:text-gray-400 mt-2">Gunakan Kamera atau input manual ID</p>
             </div>
 
             {/* Camera Area */}
@@ -451,7 +504,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                     className="mb-10 bg-brand-600 text-white px-8 py-4 rounded-xl font-bold shadow-xl shadow-brand-600/30 hover:bg-brand-700 transition-all flex items-center gap-3 mx-auto transform hover:scale-105"
                 >
                     <Smartphone className="w-6 h-6" />
-                    Buka Kamera HP
+                    Buka Kamera
                 </button>
             )}
 
@@ -487,13 +540,13 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
       {/* QR LIST MODE */}
       {viewMode === 'qr_list' && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 no-print">
-            {projectEmployees.length === 0 && (
+            {periodEmployees.length === 0 && (
                 <div className="col-span-full text-center py-12 text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
                     <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    Belum ada karyawan di proyek ini.
+                    Belum ada karyawan di periode ini.
                 </div>
             )}
-            {projectEmployees.map(emp => (
+            {periodEmployees.map(emp => (
                 <div key={emp.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center gap-4 group">
                     <div className="bg-white p-3 border border-gray-100 rounded-xl shadow-inner">
                         <img 
@@ -567,9 +620,9 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
             <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs font-bold">
                 <tr>
-                    <th className="px-4 py-4 sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 w-12 text-center shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">No</th>
-                    <th className="px-4 py-4 sticky left-12 bg-gray-50 dark:bg-gray-800 z-10 w-48 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">Nama</th>
-                    <th className="px-4 py-4 sticky left-60 bg-gray-50 dark:bg-gray-800 z-10 w-24 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Jabatan</th>
+                    <th className="hidden md:table-cell px-4 py-4 sticky left-0 bg-gray-50 dark:bg-gray-800 z-20 w-12 text-center shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">No</th>
+                    <th className="px-4 py-4 sticky left-0 md:left-12 bg-gray-50 dark:bg-gray-800 z-20 w-32 md:w-48 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">Nama</th>
+                    <th className="hidden md:table-cell px-4 py-4 sticky left-60 bg-gray-50 dark:bg-gray-800 z-20 w-24 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Jabatan</th>
                     {dates.map((d) => (
                         <th key={d.toISOString()} className={`px-2 py-4 text-center min-w-[60px] border-l border-gray-200 dark:border-gray-700 ${d.toISOString().split('T')[0] === todayStr ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}`}>
                             <div className="flex flex-col">
@@ -583,14 +636,14 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {projectEmployees.length === 0 && (
+                    {periodEmployees.length === 0 && (
                         <tr>
                             <td colSpan={dates.length + 5} className="px-4 py-12 text-center text-gray-500 italic">
-                                Belum ada karyawan. Tambahkan karyawan melalui tombol "Kelola Karyawan".
+                                Belum ada karyawan di periode ini. Tambahkan karyawan melalui tombol "Karyawan".
                             </td>
                         </tr>
                     )}
-                    {projectEmployees.map((emp, idx) => {
+                    {periodEmployees.map((emp, idx) => {
                         const record = localRecords.find(r => r.employeeId === emp.id) || { employeeId: emp.id, days: {} };
                         
                         let totalPresence = 0;
@@ -648,9 +701,12 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
 
                         return (
                             <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                <td className="px-4 py-3 sticky left-0 bg-white dark:bg-gray-800 text-center font-bold text-gray-400 dark:text-gray-500 align-middle shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">{idx + 1}</td>
-                                <td className="px-4 py-3 sticky left-12 bg-white dark:bg-gray-800 font-bold text-gray-800 dark:text-gray-100 align-middle shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">{emp.name}</td>
-                                <td className="px-4 py-3 sticky left-60 bg-white dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 font-medium align-middle shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{emp.position}</td>
+                                <td className="hidden md:table-cell px-4 py-3 sticky left-0 bg-white dark:bg-gray-800 text-center font-bold text-gray-400 dark:text-gray-500 align-middle shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] z-10">{idx + 1}</td>
+                                <td className="px-4 py-3 sticky left-0 md:left-12 bg-white dark:bg-gray-800 font-bold text-gray-800 dark:text-gray-100 align-middle shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] z-10">
+                                    <div className="truncate w-24 md:w-auto">{emp.name}</div>
+                                    <div className="md:hidden text-[10px] text-gray-400 font-normal truncate w-24">{emp.position}</div>
+                                </td>
+                                <td className="hidden md:table-cell px-4 py-3 sticky left-60 bg-white dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 font-medium align-middle shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10">{emp.position}</td>
                                 {dateCells}
                                 <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-white border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 align-middle">{totalPresence}</td>
                                 <td className="px-4 py-3 text-center font-bold text-orange-600 dark:text-orange-400 border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 align-middle">{totalOvertime > 0 ? `${totalOvertime}j` : '-'}</td>
@@ -700,7 +756,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({ state, onUpdate,
                     </tr>
                 </thead>
                 <tbody>
-                    {projectEmployees.map((emp, idx) => {
+                    {periodEmployees.map((emp, idx) => {
                         const record = localRecords.find(r => r.employeeId === emp.id) || { employeeId: emp.id, days: {} };
                         
                         let totalPresence = 0;
