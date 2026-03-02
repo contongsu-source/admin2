@@ -56,6 +56,27 @@ const App: React.FC = () => {
 
   // MIGRATION: Move legacy materials (keyed by projectId) to current period
   useEffect(() => {
+    setState(prev => {
+        let hasCorruption = false;
+        const cleanAttendance: Record<string, AttendanceRecord[]> = {};
+        
+        Object.keys(prev.attendance).forEach(key => {
+            if (Array.isArray(prev.attendance[key])) {
+                cleanAttendance[key] = prev.attendance[key];
+            } else {
+                hasCorruption = true;
+            }
+        });
+
+        if (hasCorruption) {
+            return {
+                ...prev,
+                attendance: cleanAttendance
+            };
+        }
+        return prev;
+    });
+
     const currentProject = state.projects.find(p => p.id === state.currentProjectId);
     if (!currentProject) return;
 
@@ -350,7 +371,9 @@ const App: React.FC = () => {
           employees: prev.employees.filter(e => e.id !== empId),
           // Also cleanup attendance records across all periods
           attendance: Object.keys(prev.attendance).reduce((acc, periodId) => {
-              acc[periodId] = prev.attendance[periodId].filter(r => r.employeeId !== empId);
+              if (Array.isArray(prev.attendance[periodId])) {
+                  acc[periodId] = prev.attendance[periodId].filter(r => r.employeeId !== empId);
+              }
               return acc;
           }, {} as Record<string, AttendanceRecord[]>)
       }));
@@ -362,7 +385,7 @@ const App: React.FC = () => {
     setState(prev => ({
       ...prev,
       attendance: {
-        ...prev,
+        ...prev.attendance,
         [periodId]: (prev.attendance[periodId] || []).filter(r => r.employeeId !== empId)
       }
     }));
