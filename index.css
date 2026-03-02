@@ -17,8 +17,36 @@
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    width: 100%;
+  }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
-  body { background: white !important; }
-  .page-break { page-break-before: always; }
+  .page-break { 
+    page-break-before: always; 
+    break-before: page;
+    display: block;
+  }
+  
+  /* Reset max-widths for print to use full paper width if needed, or keep them constrained if design requires */
+  .max-w-2xl {
+    max-width: 100% !important;
+  }
+  
+  /* Ensure tables don't get cut off */
+  table {
+    width: 100% !important;
+  }
+  
+  /* Hide scrollbars */
+  ::-webkit-scrollbar {
+    display: none;
+  }
 }

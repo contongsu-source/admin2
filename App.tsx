@@ -343,12 +343,56 @@ const App: React.FC = () => {
   };
 
   const handleDeleteEmployee = (empId: string) => {
-      if(!confirm("Hapus karyawan ini? Data absensi lama mungkin akan menjadi tidak valid.")) return;
+      if(!confirm("Hapus karyawan ini secara PERMANEN dari sistem? Semua data absensi di SEMUA periode akan hilang.")) return;
       
       setState(prev => ({
           ...prev,
           employees: prev.employees.filter(e => e.id !== empId),
+          // Also cleanup attendance records across all periods
+          attendance: Object.keys(prev.attendance).reduce((acc, periodId) => {
+              acc[periodId] = prev.attendance[periodId].filter(r => r.employeeId !== empId);
+              return acc;
+          }, {} as Record<string, AttendanceRecord[]>)
       }));
+  };
+
+  const handleRemoveEmployeeFromPeriod = (empId: string, periodId: string) => {
+    if(!confirm("Hapus data karyawan ini dari PERIODE INI saja? Data di periode lain tidak akan terhapus.")) return;
+    
+    setState(prev => ({
+      ...prev,
+      attendance: {
+        ...prev,
+        [periodId]: (prev.attendance[periodId] || []).filter(r => r.employeeId !== empId)
+      }
+    }));
+  };
+
+  const handleAddEmployeeToPeriod = (empId: string, periodId: string) => {
+    const period = state.periods.find(p => p.id === periodId);
+    if (!period) return;
+
+    setState(prev => {
+        const existingRecords = prev.attendance[periodId] || [];
+        if (existingRecords.find(r => r.employeeId === empId)) return prev;
+
+        const start = new Date(period.startDate);
+        const end = new Date(period.endDate);
+        const days: Record<string, DailyAttendance> = {};
+        
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            days[dateStr] = { date: dateStr, isPresent: false, overtimeHours: 0 };
+        }
+
+        return {
+            ...prev,
+            attendance: {
+                ...prev.attendance,
+                [periodId]: [...existingRecords, { employeeId: empId, days }]
+            }
+        };
+    });
   };
 
   // --- End Employee Management ---
@@ -480,6 +524,8 @@ const App: React.FC = () => {
             onAddEmployee={handleAddEmployee}
             onUpdateEmployee={handleUpdateEmployee}
             onDeleteEmployee={handleDeleteEmployee}
+            onRemoveFromPeriod={handleRemoveEmployeeFromPeriod}
+            onAddToPeriod={handleAddEmployeeToPeriod}
         />;
       case 'payroll':
         return <PayrollPage 
