@@ -137,7 +137,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       {printMode === 'recap' && (
         <style type="text/css" media="print">
           {`
-            @page { size: landscape; margin: 15mm; }
+            @page { size: portrait; margin: 10mm; }
           `}
         </style>
       )}
@@ -159,18 +159,18 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
 
       <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden ${printMode === 'slips' ? 'no-print' : ''} ${printMode === 'recap' ? 'print:border-black print:shadow-none print:overflow-visible' : ''}`}>
         <div className="overflow-x-auto print:overflow-visible">
-            <table className="w-full text-sm text-left print:text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-xs font-semibold print:bg-gray-200 print:text-black print:text-[10px]">
+            <table className="w-full text-sm text-left print:text-[10px]">
+                <thead className="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-xs font-semibold print:bg-gray-200 print:text-black print:text-[9px]">
                     <tr>
-                        <th className="px-4 py-3 w-12 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:px-2 print:py-2">No</th>
-                        <th className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 print:border-black print:px-2 print:py-2">Nama</th>
-                        <th className="px-4 py-3 w-20 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:px-2 print:py-2">Hari</th>
-                        <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-2 print:py-2">Gaji / Hari</th>
-                        <th className="px-4 py-3 w-20 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:px-2 print:py-2">Jam OT</th>
-                        <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-2 print:py-2">Lembur / Jam</th>
-                        <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-2 print:py-2">Total Gaji</th>
-                        <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-2 print:py-2">Total Lembur</th>
-                        <th className="px-4 py-3 text-right bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700 print:bg-white print:border-black print:px-2 print:py-2">Total Terima</th>
+                        <th className="px-4 py-3 w-12 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">No</th>
+                        <th className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Nama</th>
+                        <th className="px-4 py-3 w-20 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Hari</th>
+                        <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Gaji/Hr</th>
+                        <th className="px-4 py-3 w-20 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Jam OT</th>
+                        <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Lembur/Jm</th>
+                        <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Tot. Gaji</th>
+                        <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Tot. Lembur</th>
+                        <th className="px-4 py-3 text-right bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700 print:bg-white print:border-black print:px-1 print:py-1">Terima</th>
                         <th className="px-4 py-3 text-center border-b border-gray-200 dark:border-gray-700 no-print">Slip</th>
                     </tr>
                 </thead>
@@ -182,13 +182,13 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                     )}
                     {payrollData.map((row, idx) => (
                         <tr key={row.emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 print:hover:bg-transparent">
-                            <td className="px-4 py-3 text-center text-gray-500 dark:text-gray-400 print:text-black print:px-2 print:py-2">{idx + 1}</td>
-                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white print:text-black print:px-2 print:py-2">
+                            <td className="px-4 py-3 text-center text-gray-500 dark:text-gray-400 print:text-black print:px-1 print:py-1">{idx + 1}</td>
+                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white print:text-black print:px-1 print:py-1">
                                 {row.emp.name}
-                                <div className="text-xs text-gray-400 font-normal print:text-gray-600 print:text-[10px]">{row.emp.position}</div>
+                                <div className="text-xs text-gray-400 font-normal print:text-gray-600 print:text-[8px]">{row.emp.position}</div>
                             </td>
-                            <td className="px-4 py-3 text-center dark:text-gray-300 print:px-2 print:py-2">{row.workDays}</td>
-                            <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300 print:text-black print:px-2 print:py-2">
+                            <td className="px-4 py-3 text-center dark:text-gray-300 print:px-1 print:py-1">{row.workDays}</td>
+                            <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300 print:text-black print:px-1 print:py-1">
                                 {isEditingRates ? (
                                     <input 
                                         type="number" 
@@ -200,8 +200,8 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                                     row.emp.dailyRate.toLocaleString('id-ID')
                                 )}
                             </td>
-                            <td className="px-4 py-3 text-center dark:text-gray-300 print:px-2 print:py-2">{row.overtimeHours}</td>
-                            <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300 print:text-black print:px-2 print:py-2">
+                            <td className="px-4 py-3 text-center dark:text-gray-300 print:px-1 print:py-1">{row.overtimeHours}</td>
+                            <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300 print:text-black print:px-1 print:py-1">
                                 {isEditingRates ? (
                                     <input 
                                         type="number" 
@@ -213,13 +213,13 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                                     row.emp.overtimeRate > 0 ? row.emp.overtimeRate.toLocaleString('id-ID') : '-'
                                 )}
                             </td>
-                            <td className="px-4 py-3 text-right font-medium dark:text-gray-200 print:px-2 print:py-2">
+                            <td className="px-4 py-3 text-right font-medium dark:text-gray-200 print:px-1 print:py-1">
                                 {row.basicSalary.toLocaleString('id-ID')}
                             </td>
-                            <td className="px-4 py-3 text-right font-medium dark:text-gray-200 print:px-2 print:py-2">
+                            <td className="px-4 py-3 text-right font-medium dark:text-gray-200 print:px-1 print:py-1">
                                 {row.overtimeSalary > 0 ? row.overtimeSalary.toLocaleString('id-ID') : '-'}
                             </td>
-                            <td className="px-4 py-3 text-right font-bold text-brand-700 dark:text-brand-400 bg-blue-50/30 dark:bg-blue-900/10 print:bg-transparent print:text-black print:px-2 print:py-2">
+                            <td className="px-4 py-3 text-right font-bold text-brand-700 dark:text-brand-400 bg-blue-50/30 dark:bg-blue-900/10 print:bg-transparent print:text-black print:px-1 print:py-1">
                                 {row.totalSalary.toLocaleString('id-ID')}
                             </td>
                             <td className="px-4 py-3 text-center no-print">
@@ -304,8 +304,8 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                 </tbody>
                 <tfoot className="bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 print:bg-white print:border-t-2 print:border-black">
                     <tr>
-                        <td colSpan={8} className="px-4 py-4 text-right font-bold text-gray-900 dark:text-white uppercase print:px-2 print:py-2">Grand Total</td>
-                        <td className="px-4 py-4 text-right font-bold text-brand-700 dark:text-brand-400 text-lg print:text-black print:text-sm print:px-2 print:py-2">
+                        <td colSpan={8} className="px-4 py-4 text-right font-bold text-gray-900 dark:text-white uppercase print:px-1 print:py-1">Grand Total</td>
+                        <td className="px-4 py-4 text-right font-bold text-brand-700 dark:text-brand-400 text-lg print:text-black print:text-xs print:px-1 print:py-1">
                             Rp {grandTotal.toLocaleString('id-ID')}
                         </td>
                         <td className="no-print"></td>
