@@ -367,12 +367,12 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
                     <th className="px-4 py-4 w-16 border-b border-gray-200 dark:border-gray-700 no-print"></th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 print:divide-gray-400">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 print:divide-none">
                 {materials.map((item, idx) => (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors print:hover:bg-transparent print:break-inside-avoid">
-                        <td className="px-4 py-3.5 text-center text-gray-500 dark:text-gray-400 border-b-0">{idx + 1}</td>
-                        <td className="px-4 py-3.5 text-gray-600 dark:text-gray-300 border-b-0 font-medium">{item.date}</td>
-                        <td className="px-4 py-3.5 font-bold text-gray-900 dark:text-white border-b-0">{item.itemName}</td>
+                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors print:hover:bg-transparent print:border-b print:border-gray-300">
+                        <td className="px-4 py-3.5 text-center text-gray-500 dark:text-gray-400 border-b-0 print:border-b-0">{idx + 1}</td>
+                        <td className="px-4 py-3.5 text-gray-600 dark:text-gray-300 border-b-0 font-medium print:border-b-0">{item.date}</td>
+                        <td className="px-4 py-3.5 font-bold text-gray-900 dark:text-white border-b-0 print:border-b-0">{item.itemName}</td>
                         <td className="px-4 py-3.5 text-center border-b-0 no-print">
                             {item.receiptImage ? (
                                 <button 
@@ -389,10 +389,10 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
                                 <span className="text-gray-300 text-xs">-</span>
                             )}
                         </td>
-                        <td className="px-4 py-3.5 text-center border-b-0 dark:text-gray-300">{item.quantity}</td>
-                        <td className="px-4 py-3.5 text-gray-600 dark:text-gray-300 border-b-0">{item.unit}</td>
-                        <td className="px-4 py-3.5 text-right border-b-0 dark:text-gray-300">Rp {item.unitPrice.toLocaleString('id-ID')}</td>
-                        <td className="px-4 py-3.5 text-right font-bold text-gray-900 dark:text-white border-b-0">Rp {item.totalPrice.toLocaleString('id-ID')}</td>
+                        <td className="px-4 py-3.5 text-center border-b-0 dark:text-gray-300 print:border-b-0">{item.quantity}</td>
+                        <td className="px-4 py-3.5 text-gray-600 dark:text-gray-300 border-b-0 print:border-b-0">{item.unit}</td>
+                        <td className="px-4 py-3.5 text-right border-b-0 dark:text-gray-300 print:border-b-0">Rp {item.unitPrice.toLocaleString('id-ID')}</td>
+                        <td className="px-4 py-3.5 text-right font-bold text-gray-900 dark:text-white border-b-0 print:border-b-0">Rp {item.totalPrice.toLocaleString('id-ID')}</td>
                         <td className="px-4 py-3.5 text-center border-b-0 no-print">
                             <button 
                                 onClick={() => handleDelete(item.id)}
