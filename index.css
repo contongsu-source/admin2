@@ -43,6 +43,17 @@
   /* Ensure tables don't get cut off */
   table {
     width: 100% !important;
+    border-collapse: collapse;
+  }
+  
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  td, th {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   
   /* Hide scrollbars */
