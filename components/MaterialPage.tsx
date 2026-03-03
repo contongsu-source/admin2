@@ -352,7 +352,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
       </div>
 
       {/* DESKTOP TABLE VIEW (Visible only on desktop) */}
-      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden print:block print:border-black print:shadow-none">
+      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden print:block print:border-black print:shadow-none print:overflow-visible">
         <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs font-bold print:bg-gray-200 print:text-black">
                 <tr>
@@ -369,7 +369,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 print:divide-gray-400">
                 {materials.map((item, idx) => (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors print:hover:bg-transparent">
+                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors print:hover:bg-transparent print:break-inside-avoid">
                         <td className="px-4 py-3.5 text-center text-gray-500 dark:text-gray-400 border-b-0">{idx + 1}</td>
                         <td className="px-4 py-3.5 text-gray-600 dark:text-gray-300 border-b-0 font-medium">{item.date}</td>
                         <td className="px-4 py-3.5 font-bold text-gray-900 dark:text-white border-b-0">{item.itemName}</td>
