@@ -47,6 +47,29 @@ export const ProjectReportPrint: React.FC<ProjectReportPrintProps> = ({ state, p
         day: 'numeric'
     });
 
+    const currentDateShort = new Date().toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    let earliestDate = '';
+    if (projectPeriods.length > 0) {
+        const sortedPeriods = [...projectPeriods].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+        earliestDate = sortedPeriods[0].startDate;
+    }
+
+    const formatDate = (dateString: string) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const periodString = earliestDate ? `${formatDate(earliestDate)} s/d ${currentDateShort}` : '-';
+
     return (
         <div className="hidden print:block print:w-full print:bg-white print:text-black">
             <div className="mb-8">
@@ -85,15 +108,11 @@ export const ProjectReportPrint: React.FC<ProjectReportPrintProps> = ({ state, p
                     </tr>
                     <tr>
                         <td className="px-4 py-2 border border-gray-300 font-medium">Periode</td>
-                        <td className="px-4 py-2 border border-gray-300">-</td>
+                        <td className="px-4 py-2 border border-gray-300">{periodString}</td>
                     </tr>
                     <tr>
                         <td className="px-4 py-2 border border-gray-300 font-medium">Status</td>
                         <td className="px-4 py-2 border border-gray-300">{project.status || 'Aktif'}</td>
-                    </tr>
-                    <tr>
-                        <td className="px-4 py-2 border border-gray-300 font-medium">Progress</td>
-                        <td className="px-4 py-2 border border-gray-300">0%</td>
                     </tr>
                 </tbody>
             </table>
