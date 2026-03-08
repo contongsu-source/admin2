@@ -64,6 +64,8 @@ export interface Project {
   clientName: string; // e.g., "Kepada Yth, Bpk. Kepala Desa Kandangan"
   clientAddress: string;
   currentPeriodId: string;
+  budget?: number; // Dana Masuk
+  status?: 'Aktif' | 'Selesai' | 'Pending'; // Status proyek
 }
 
 export interface CompanyProfile {

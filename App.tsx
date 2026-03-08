@@ -500,7 +500,7 @@ const App: React.FC = () => {
       }));
   };
 
-  const handleAddProject = (name: string, clientName: string, clientAddress: string, startDate: string, endDate: string) => {
+  const handleAddProject = (name: string, clientName: string, clientAddress: string, startDate: string, endDate: string, budget: number = 0, status: 'Aktif' | 'Selesai' | 'Pending' = 'Aktif') => {
     const newProjectId = `p${Date.now()}`;
     const newPeriodId = `per${Date.now()}`;
     const periodName = generatePeriodName(startDate, endDate);
@@ -510,7 +510,9 @@ const App: React.FC = () => {
         name: name.toUpperCase(),
         clientName,
         clientAddress,
-        currentPeriodId: newPeriodId
+        currentPeriodId: newPeriodId,
+        budget,
+        status
     };
     
     const newPeriod: ProjectPeriod = {
@@ -534,6 +536,13 @@ const App: React.FC = () => {
         pettyCash: { ...prev.pettyCash, [newProjectId]: [] },
         currentProjectId: newProjectId 
     }));
+  };
+
+  const handleUpdateProject = (projectId: string, updates: Partial<Project>) => {
+      setState(prev => ({
+          ...prev,
+          projects: prev.projects.map(p => p.id === projectId ? { ...p, ...updates } : p)
+      }));
   };
 
   const renderContent = () => {
@@ -569,6 +578,7 @@ const App: React.FC = () => {
             onUpdatePeriod={handleUpdatePeriod}
             onAddNewPeriod={handleAddNewPeriod}
             onAddProject={handleAddProject}
+            onUpdateProject={handleUpdateProject}
             cloudId={cloudId}
             onSetCloudId={handleSetCloudId}
             onLoadCloudData={fetchCloudData}
