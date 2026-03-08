@@ -85,3 +85,15 @@ export interface AppState {
   pettyCash: Record<string, PettyCashTransaction[]>; // Keyed by Project ID
   currentProjectId: string;
 }
+
+export const prepareStateForSync = (state: AppState): AppState => {
+  const syncState = { ...state };
+  syncState.materials = {};
+  for (const periodId in state.materials) {
+    syncState.materials[periodId] = state.materials[periodId].map(item => ({
+      ...item,
+      receiptImage: undefined // Strip images to avoid payload too large errors
+    }));
+  }
+  return syncState;
+};

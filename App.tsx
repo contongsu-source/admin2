@@ -7,7 +7,7 @@ import { MaterialPage } from './components/MaterialPage';
 import { InvoicePage } from './components/InvoicePage';
 import { SettingsPage } from './components/SettingsPage';
 import { PettyCashPage } from './components/PettyCashPage';
-import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction } from './types';
+import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
 import { Cloud, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -165,13 +165,14 @@ const App: React.FC = () => {
         // Debounce the save
         const timer = setTimeout(async () => {
             try {
+                const syncState = prepareStateForSync(state);
                 const response = await fetch(`https://jsonblob.com/api/jsonBlob/${cloudId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify(state)
+                    body: JSON.stringify(syncState)
                 });
                 
                 if (response.ok) {
@@ -186,7 +187,7 @@ const App: React.FC = () => {
             
             // Revert to idle after showing status
             setTimeout(() => setSyncStatus('idle'), 3000);
-        }, 1000); 
+        }, 2000); 
 
         return () => clearTimeout(timer);
     }
@@ -483,15 +484,18 @@ const App: React.FC = () => {
           attendance: {
               ...prev.attendance,
               [periodId]: (prev.attendance[periodId] || []).map(record => {
-                  // Reset days for the new period range as requested
                   const newDays: Record<string, DailyAttendance> = {};
                   const start = new Date(startDate);
                   const end = new Date(endDate);
                   
-                  // Generate fresh attendance days for the new range
                   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
                        const dateStr = d.toISOString().split('T')[0];
-                       newDays[dateStr] = { date: dateStr, isPresent: false, overtimeHours: 0 };
+                       // Preserve existing data if it exists for this date
+                       if (record.days && record.days[dateStr]) {
+                           newDays[dateStr] = record.days[dateStr];
+                       } else {
+                           newDays[dateStr] = { date: dateStr, isPresent: false, overtimeHours: 0 };
+                       }
                   }
                   
                   return { ...record, days: newDays };
