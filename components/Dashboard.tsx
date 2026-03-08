@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { AppState, DailyAttendance } from '../types';
-import { Users, DollarSign, Calendar, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { Users, DollarSign, Calendar, TrendingUp, ArrowUpRight, Briefcase, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface DashboardProps {
@@ -48,6 +48,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
     { name: 'Material', value: totalMaterialCost, color: '#f59e0b' },
   ];
 
+  // Calculate Overall Project Finances
+  const projectPeriods = state.periods.filter(p => p.projectId === state.currentProjectId);
+  let overallTerpakai = 0;
+  
+  projectPeriods.forEach(period => {
+      // Payroll
+      const attRecords = state.attendance[period.id] || [];
+      attRecords.forEach(record => {
+          const emp = state.employees.find(e => e.id === record.employeeId);
+          if (emp) {
+              let workDays = 0;
+              let overtimeHours = 0;
+              Object.values(record.days).forEach((day: any) => {
+                  if (day.isPresent) workDays++;
+                  overtimeHours += day.overtimeHours || 0;
+              });
+              overallTerpakai += (workDays * emp.dailyRate) + (overtimeHours * emp.overtimeRate);
+          }
+      });
+      
+      // Material
+      const mats = state.materials[period.id] || [];
+      overallTerpakai += mats.reduce((sum, m) => sum + m.totalPrice, 0);
+  });
+  
+  // Petty Cash (Excluded as requested)
+  // const pettyCash = state.pettyCash[state.currentProjectId] || [];
+  // overallTerpakai += pettyCash.filter(t => t.type === 'out').reduce((sum, t) => sum + t.amount, 0);
+  
+  const budget = currentProject?.budget || 0;
+  const sisa = budget - overallTerpakai;
+  const budgetPercentage = budget > 0 ? Math.min(100, (overallTerpakai / budget) * 100) : 0;
+
   // Helper component for stats card
   const StatCard = ({ title, value, icon: Icon, colorClass, bgClass, subtext }: any) => (
       <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-shadow">
@@ -84,7 +117,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <StatCard 
-            title="Total Pengeluaran" 
+            title="Pengeluaran Periode Ini" 
             value={`Rp ${totalCost.toLocaleString('id-ID')}`} 
             icon={DollarSign}
             bgClass="bg-blue-50 dark:bg-blue-900/20"
@@ -115,6 +148,60 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
             colorClass="text-orange-600 dark:text-orange-400"
             subtext={`${materials.length} item`}
         />
+      </div>
+
+      {/* Overall Project Budget Status */}
+      <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
+                      <Briefcase className="w-5 h-5" />
+                  </div>
+                  <div>
+                      <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">Status Anggaran Keseluruhan Proyek</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Total akumulasi dari semua periode</p>
+                  </div>
+              </div>
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                  currentProject?.status === 'Selesai' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
+                  currentProject?.status === 'Pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 
+                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              }`}>
+                  {currentProject?.status === 'Selesai' ? <CheckCircle2 className="w-3.5 h-3.5" /> : 
+                   currentProject?.status === 'Pending' ? <AlertCircle className="w-3.5 h-3.5" /> : 
+                   <TrendingUp className="w-3.5 h-3.5" />}
+                  {currentProject?.status || 'Aktif'}
+              </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Dana Masuk (Budget)</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">Rp {budget.toLocaleString('id-ID')}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Terpakai</p>
+                  <p className="text-lg font-bold text-red-600 dark:text-red-400">Rp {overallTerpakai.toLocaleString('id-ID')}</p>
+              </div>
+              <div className={`p-4 rounded-xl border ${sisa >= 0 ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30'}`}>
+                  <p className={`text-xs font-medium mb-1 ${sisa >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>Sisa / (Kurang)</p>
+                  <p className={`text-lg font-bold ${sisa >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>Rp {sisa.toLocaleString('id-ID')}</p>
+              </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div>
+              <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                  <span>Penggunaan Anggaran</span>
+                  <span>{budgetPercentage.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                  <div 
+                      className={`h-2.5 rounded-full ${budgetPercentage > 90 ? 'bg-red-500' : budgetPercentage > 75 ? 'bg-amber-500' : 'bg-brand-500'}`} 
+                      style={{ width: `${budgetPercentage}%` }}
+                  ></div>
+              </div>
+          </div>
       </div>
 
       {/* Charts */}

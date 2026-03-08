@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppState, CompanyProfile, Project, ProjectPeriod } from '../types';
-import { Save, Trash2, Calendar, Plus, Cloud, Copy, Download, Upload, FileJson } from 'lucide-react';
+import { Save, Trash2, Calendar, Plus, Cloud, Copy, Download, Upload, FileJson, Printer } from 'lucide-react';
 
 interface SettingsPageProps {
   state: AppState;
@@ -8,7 +8,8 @@ interface SettingsPageProps {
   onDeleteProject: (projectId: string) => void;
   onUpdatePeriod: (periodId: string, startDate: string, endDate: string, keepName?: boolean, customName?: string) => void;
   onAddNewPeriod: (projectId: string, startDate: string, endDate: string) => void;
-  onAddProject: (name: string, clientName: string, clientAddress: string, startDate: string, endDate: string) => void;
+  onAddProject: (name: string, clientName: string, clientAddress: string, startDate: string, endDate: string, budget?: number, status?: 'Aktif' | 'Selesai' | 'Pending') => void;
+  onUpdateProject: (projectId: string, updates: Partial<Project>) => void;
   cloudId: string | null;
   onSetCloudId: (id: string | null) => void;
   onLoadCloudData: (id: string) => Promise<void>;
@@ -22,6 +23,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     onUpdatePeriod, 
     onAddNewPeriod,
     onAddProject,
+    onUpdateProject,
     cloudId,
     onSetCloudId,
     onLoadCloudData,
@@ -37,7 +39,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     clientName: '',
     clientAddress: '',
     startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    endDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    budget: 0,
+    status: 'Aktif' as 'Aktif' | 'Selesai' | 'Pending'
   });
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -91,7 +95,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         newProject.clientName || 'Client Umum', 
         newProject.clientAddress || 'Alamat Proyek', 
         newProject.startDate, 
-        newProject.endDate
+        newProject.endDate,
+        newProject.budget,
+        newProject.status
     );
     
     // Reset
@@ -100,7 +106,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         clientName: '',
         clientAddress: '',
         startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        endDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        budget: 0,
+        status: 'Aktif'
     });
     alert('Proyek baru berhasil dibuat!');
   };
@@ -224,14 +232,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto pb-12">
-      <div>
+    <div className="space-y-8 max-w-4xl mx-auto pb-12 print:max-w-none print:space-y-0 print:pb-0">
+      <div className="print:hidden">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Pengaturan</h2>
         <p className="text-gray-500 dark:text-gray-400">Kelola profil perusahaan, proyek, dan sinkronisasi data</p>
       </div>
 
       {/* Cloud Sync Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-900 dark:to-indigo-900 p-6 rounded-xl shadow-lg text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-900 dark:to-indigo-900 p-6 rounded-xl shadow-lg text-white print:hidden">
           <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                   <Cloud className="w-6 h-6 text-white" />
@@ -312,7 +320,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       </div>
 
       {/* Manual Backup & Restore Section */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-900 dark:to-pink-900 p-6 rounded-xl shadow-lg text-white">
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-900 dark:to-pink-900 p-6 rounded-xl shadow-lg text-white print:hidden">
           <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                   <FileJson className="w-6 h-6 text-white" />
@@ -358,7 +366,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       </div>
 
       {/* Company Profile Section */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm print:hidden">
         <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-brand-100 dark:bg-brand-900/30 rounded-lg text-brand-600 dark:text-brand-400">
                 <Save className="w-5 h-5" />
@@ -416,7 +424,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       </div>
 
       {/* Create Project Section */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm print:hidden">
         <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400">
                 <Plus className="w-5 h-5" />
@@ -483,6 +491,29 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 />
             </div>
 
+            <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dana Masuk (Budget)</label>
+                <input 
+                    type="number" 
+                    value={newProject.budget}
+                    onChange={e => setNewProject({...newProject, budget: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                    placeholder="Contoh: 100000000"
+                />
+            </div>
+            <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status Proyek</label>
+                <select 
+                    value={newProject.status}
+                    onChange={e => setNewProject({...newProject, status: e.target.value as 'Aktif' | 'Selesai' | 'Pending'})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"
+                >
+                    <option value="Aktif">Aktif</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Selesai">Selesai</option>
+                </select>
+            </div>
+
             <div className="col-span-2 flex justify-end mt-2">
                 <button type="submit" className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
                     <Plus className="w-4 h-4" />
@@ -493,7 +524,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       </div>
 
       {/* Project List Section */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm print:hidden">
         <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-600 dark:text-red-400">
                 <Trash2 className="w-5 h-5" />
@@ -579,6 +610,113 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
         <p className="mt-4 text-xs text-gray-500 dark:text-gray-400 italic">* Mengubah tanggal akan otomatis memperbarui nama periode dan kolom absensi.</p>
       </div>
+      {/* Project Budget Management Section */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm print:border-none print:shadow-none print:p-0">
+        <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 print:hidden">
+                    <FileJson className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white print:text-2xl print:mb-4">Manajemen Anggaran Proyek</h3>
+            </div>
+            <button 
+                onClick={() => window.print()}
+                className="print:hidden flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+                <Printer className="w-4 h-4" />
+                Cetak PDF
+            </button>
+        </div>
+
+        <div className="overflow-x-auto print:overflow-visible">
+            <table className="w-full text-sm text-left print:text-xs">
+                <thead className="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-xs font-semibold print:bg-transparent print:text-gray-900 print:border-b-2 print:border-gray-800">
+                    <tr>
+                        <th className="px-4 py-3 print:px-2 print:py-2">Nama Proyek</th>
+                        <th className="px-4 py-3 text-center print:px-2 print:py-2">Status</th>
+                        <th className="px-4 py-3 text-right print:px-2 print:py-2">Dana Masuk</th>
+                        <th className="px-4 py-3 text-right print:px-2 print:py-2">Terpakai</th>
+                        <th className="px-4 py-3 text-right print:px-2 print:py-2">Sisa / (Kurang)</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 print:divide-none">
+                    {state.projects.map(project => {
+                        // Calculate Terpakai
+                        const projectPeriods = state.periods.filter(p => p.projectId === project.id);
+                        let totalTerpakai = 0;
+                        
+                        projectPeriods.forEach(period => {
+                            // Payroll
+                            const attendanceRecords = state.attendance[period.id] || [];
+                            attendanceRecords.forEach(record => {
+                                const emp = state.employees.find(e => e.id === record.employeeId);
+                                if (emp) {
+                                    let workDays = 0;
+                                    let overtimeHours = 0;
+                                    Object.values(record.days).forEach((day: any) => {
+                                        if (day.isPresent) workDays++;
+                                        overtimeHours += day.overtimeHours || 0;
+                                    });
+                                    totalTerpakai += (workDays * emp.dailyRate) + (overtimeHours * emp.overtimeRate);
+                                }
+                            });
+                            
+                            // Material
+                            const materials = state.materials[period.id] || [];
+                            totalTerpakai += materials.reduce((sum, m) => sum + m.totalPrice, 0);
+                        });
+                        
+                        // Petty Cash (Excluded as requested)
+                        // const pettyCash = state.pettyCash[project.id] || [];
+                        // totalTerpakai += pettyCash.filter(t => t.type === 'out').reduce((sum, t) => sum + t.amount, 0);
+                        
+                        const budget = project.budget || 0;
+                        const sisa = budget - totalTerpakai;
+
+                        return (
+                            <tr key={project.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 print:border-b print:border-gray-300 print:break-inside-avoid">
+                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-white print:px-2 print:py-2 print:text-gray-900">
+                                    {project.name}
+                                </td>
+                                <td className="px-4 py-3 text-center print:px-2 print:py-2">
+                                    <div className="print:hidden">
+                                        <select 
+                                            value={project.status || 'Aktif'}
+                                            onChange={(e) => onUpdateProject(project.id, { status: e.target.value as any })}
+                                            className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-2 py-1 text-xs"
+                                        >
+                                            <option value="Aktif">Aktif</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="Selesai">Selesai</option>
+                                        </select>
+                                    </div>
+                                    <span className="hidden print:inline font-medium text-gray-900">{project.status || 'Aktif'}</span>
+                                </td>
+                                <td className="px-4 py-3 text-right print:px-2 print:py-2">
+                                    <div className="print:hidden">
+                                        <input 
+                                            type="number" 
+                                            value={project.budget || 0}
+                                            onChange={(e) => onUpdateProject(project.id, { budget: parseInt(e.target.value) || 0 })}
+                                            className="w-32 text-right border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-2 py-1 text-xs"
+                                        />
+                                    </div>
+                                    <span className="hidden print:inline text-gray-900">Rp {(project.budget || 0).toLocaleString('id-ID')}</span>
+                                </td>
+                                <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 font-medium print:px-2 print:py-2 print:text-gray-900">
+                                    Rp {totalTerpakai.toLocaleString('id-ID')}
+                                </td>
+                                <td className={`px-4 py-3 text-right font-bold print:px-2 print:py-2 print:text-gray-900 ${sisa >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                    Rp {sisa.toLocaleString('id-ID')}
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+      </div>
+
     </div>
   );
 };
