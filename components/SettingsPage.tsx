@@ -105,6 +105,44 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       alert('Periode baru berhasil dibuat! Periode sebelumnya tetap tersimpan di riwayat.');
   };
 
+  const handlePrevWeekPeriod = (projectId: string, periodId: string) => {
+      const period = state.periods.find(p => p.id === periodId);
+      if (!period) return;
+
+      const currentStart = new Date(period.startDate);
+      const prevEnd = new Date(currentStart);
+      prevEnd.setDate(currentStart.getDate() - 1);
+      
+      const prevStart = new Date(prevEnd);
+      prevStart.setDate(prevEnd.getDate() - 6);
+
+      onAddNewPeriod(
+          projectId, 
+          prevStart.toISOString().split('T')[0], 
+          prevEnd.toISOString().split('T')[0]
+      );
+      alert('Periode minggu lalu berhasil dibuat!');
+  };
+
+  const handlePrevMonthPeriod = (projectId: string, periodId: string) => {
+      const period = state.periods.find(p => p.id === periodId);
+      if (!period) return;
+
+      const currentStart = new Date(period.startDate);
+      const prevEnd = new Date(currentStart);
+      prevEnd.setDate(currentStart.getDate() - 1);
+      
+      const prevStart = new Date(currentStart);
+      prevStart.setMonth(currentStart.getMonth() - 1);
+
+      onAddNewPeriod(
+          projectId, 
+          prevStart.toISOString().split('T')[0], 
+          prevEnd.toISOString().split('T')[0]
+      );
+      alert('Periode bulan lalu berhasil dibuat!');
+  };
+
   const handleAddProjectSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProject.name || !newProject.startDate || !newProject.endDate) return;
@@ -603,18 +641,34 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                     )}
                                 </td>
                                 <td className="px-4 py-3 text-center">
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center justify-center gap-1 flex-wrap max-w-[200px] mx-auto">
+                                        <button 
+                                            onClick={() => handlePrevMonthPeriod(project.id, period.id)}
+                                            className="text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 p-1 border border-brand-200 dark:border-brand-800 rounded hover:bg-brand-50 dark:hover:bg-brand-900/30 flex items-center gap-1 text-[10px] font-bold uppercase"
+                                            title="Buat Periode Bulan Lalu"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                            B. Lalu
+                                        </button>
+                                        <button 
+                                            onClick={() => handlePrevWeekPeriod(project.id, period.id)}
+                                            className="text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 p-1 border border-brand-200 dark:border-brand-800 rounded hover:bg-brand-50 dark:hover:bg-brand-900/30 flex items-center gap-1 text-[10px] font-bold uppercase"
+                                            title="Buat Periode Minggu Lalu"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                            M. Lalu
+                                        </button>
                                         <button 
                                             onClick={() => handleNextPeriod(project.id, period.id)}
                                             className="text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 p-1 border border-brand-200 dark:border-brand-800 rounded hover:bg-brand-50 dark:hover:bg-brand-900/30 flex items-center gap-1 text-[10px] font-bold uppercase"
                                             title="Buat Periode Baru (Minggu Depan)"
                                         >
                                             <Plus className="w-3 h-3" />
-                                            Baru
+                                            M. Depan
                                         </button>
                                         <button 
                                             onClick={() => handleDeleteProj(project.id, project.name)}
-                                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-red-900/30"
+                                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-red-900/30 ml-1"
                                             title="Hapus Proyek"
                                         >
                                             <Trash2 className="w-4 h-4" />
