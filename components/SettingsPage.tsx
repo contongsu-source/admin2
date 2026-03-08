@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { AppState, CompanyProfile, Project, ProjectPeriod } from '../types';
 import { Save, Trash2, Calendar, Plus, Cloud, Copy, Download, Upload, FileJson, Printer } from 'lucide-react';
+import { ProjectReportPrint } from './ProjectReportPrint';
+import { useReactToPrint } from 'react-to-print';
 
 interface SettingsPageProps {
   state: AppState;
@@ -32,6 +34,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [profile, setProfile] = useState<CompanyProfile>(state.companyProfile);
   const [inputCloudId, setInputCloudId] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Print Ref
+  const printRef = useRef<HTMLDivElement>(null);
+  const [projectToPrint, setProjectToPrint] = useState<string | null>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Laporan-Proyek`,
+    onAfterPrint: () => setProjectToPrint(null),
+  });
+
+  const triggerPrint = (projectId: string) => {
+      setProjectToPrint(projectId);
+      setTimeout(() => {
+          handlePrint();
+      }, 100);
+  };
   
   // New Project State
   const [newProject, setNewProject] = useState({
@@ -637,6 +656,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                         <th className="px-4 py-3 text-right print:px-2 print:py-2">Dana Masuk</th>
                         <th className="px-4 py-3 text-right print:px-2 print:py-2">Terpakai</th>
                         <th className="px-4 py-3 text-right print:px-2 print:py-2">Sisa / (Kurang)</th>
+                        <th className="px-4 py-3 text-center print:hidden">Aksi</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700 print:divide-none">
@@ -709,12 +729,28 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                 <td className={`px-4 py-3 text-right font-bold print:px-2 print:py-2 print:text-gray-900 ${sisa >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                     Rp {sisa.toLocaleString('id-ID')}
                                 </td>
+                                <td className="px-4 py-3 text-center print:hidden">
+                                    <button 
+                                        onClick={() => triggerPrint(project.id)}
+                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 border border-blue-200 dark:border-blue-800 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                        title="Cetak Laporan Proyek"
+                                    >
+                                        <Printer className="w-4 h-4" />
+                                    </button>
+                                </td>
                             </tr>
                         );
                     })}
                 </tbody>
             </table>
         </div>
+      </div>
+
+      {/* Hidden Print Component */}
+      <div className="hidden">
+          <div ref={printRef}>
+              {projectToPrint && <ProjectReportPrint state={state} projectId={projectToPrint} />}
+          </div>
       </div>
 
     </div>
