@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { AppState, CompanyProfile, Project, ProjectPeriod } from '../types';
+import { AppState, CompanyProfile, Project, ProjectPeriod, prepareStateForSync } from '../types';
 import { Save, Trash2, Calendar, Plus, Cloud, Copy, Download, Upload, FileJson, Printer } from 'lucide-react';
 import { ProjectReportPrint } from './ProjectReportPrint';
 import { useReactToPrint } from 'react-to-print';
@@ -132,8 +132,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       const prevEnd = new Date(currentStart);
       prevEnd.setDate(currentStart.getDate() - 1);
       
-      const prevStart = new Date(currentStart);
-      prevStart.setMonth(currentStart.getMonth() - 1);
+      const prevStart = new Date(prevEnd);
+      prevStart.setDate(prevEnd.getDate() - 29); // 30 days total
 
       onAddNewPeriod(
           projectId, 
@@ -188,13 +188,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       
       setIsSyncing(true);
       try {
+          const syncState = prepareStateForSync(state);
           const response = await fetch('https://jsonblob.com/api/jsonBlob', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
                   'Accept': 'application/json'
               },
-              body: JSON.stringify(state)
+              body: JSON.stringify(syncState)
           });
           
           if (response.ok) {
