@@ -1,7 +1,7 @@
 import { AppState, Employee, Project, ProjectPeriod, MaterialItem, AttendanceRecord, CompanyProfile, PettyCashTransaction } from './types';
 
 export const INITIAL_COMPANY_PROFILE: CompanyProfile = {
-  name: 'CV. Sembilan Bintang Abadi',
+  name: 'CV. SBM',
   address: 'Ds. Pancuran Rt.003 Rw.002 Kandangan, Bawen Kab. Semarang Jawa Tengah',
   director: 'EKHWANUDIN',
   city: 'Kandangan'

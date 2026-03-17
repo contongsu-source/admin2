@@ -23,6 +23,8 @@ export interface DailyAttendance {
   date: string; // ISO date string
   isPresent: boolean; // 1 or 0
   overtimeHours: number;
+  checkInTime?: string; // HH:mm format
+  checkOutTime?: string; // HH:mm format
 }
 
 export interface AttendanceRecord {
