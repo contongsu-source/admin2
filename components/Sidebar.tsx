@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, com
         
         <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <div className="bg-brand-500/10 dark:bg-brand-400/10 rounded-xl p-4 text-center">
-              <p className="text-xs font-semibold text-brand-700 dark:text-brand-300 mb-1">SBA System V1.3</p>
+              <p className="text-xs font-semibold text-brand-700 dark:text-brand-300 mb-1">SBM System V1.3</p>
               <p className="text-[10px] text-brand-600/70 dark:text-brand-400/60">&copy; 2026 Cloud Sync Enabled</p>
           </div>
         </div>

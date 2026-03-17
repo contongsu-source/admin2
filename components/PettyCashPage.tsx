@@ -71,7 +71,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template_Kas_Kecil");
-    XLSX.writeFile(wb, "Template_Kas_Kecil_SBA.xlsx");
+    XLSX.writeFile(wb, "Template_Kas_Kecil_SBM.xlsx");
   };
 
   const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,7 +248,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
                     <p className="text-sm text-blue-800 dark:text-blue-400 mb-3 font-medium">
-                        Sistem SBA dapat mendeteksi kolom secara otomatis. Pastikan nama kolom di baris pertama Excel Anda mengandung salah satu kata kunci berikut:
+                        Sistem SBM dapat mendeteksi kolom secara otomatis. Pastikan nama kolom di baris pertama Excel Anda mengandung salah satu kata kunci berikut:
                     </p>
                     <ul className="space-y-2">
                         <li className="flex gap-2 text-xs">

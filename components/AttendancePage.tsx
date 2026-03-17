@@ -51,7 +51,6 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   const [editEmpData, setEditEmpData] = useState<Partial<Employee>>({});
 
   // Camera scan state
-  const [showCamera, setShowCamera] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   // Keep local records in sync if parent updates, unless editing
@@ -124,45 +123,105 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
     setLocalRecords(newRecords);
   };
 
+  const lastScanTimeRef = useRef<Record<string, number>>({});
+  const processScanRef = useRef<((empId: string) => boolean) | null>(null);
+
   const processScan = (empId: string) => {
+    const nowTime = Date.now();
+    // Cooldown of 5 seconds per employee to prevent spam
+    if (lastScanTimeRef.current[empId] && nowTime - lastScanTimeRef.current[empId] < 5000) {
+        return false;
+    }
+    lastScanTimeRef.current[empId] = nowTime;
+
     const emp = projectEmployees.find(e => e.id === empId);
-    if (emp) {
-        // Mark present for today
-        // Ensure record exists
-        let employeeRecord = localRecords.find(r => r.employeeId === empId);
-        let newRecords = [...localRecords];
+    if (!emp) {
+        setLastScanned({ name: 'Tidak Dikenal', time: 'ID Karyawan tidak valid!' });
+        return false;
+    }
+
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const currentMinutes = hours * 60 + minutes;
+    const currentTimeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+    const isCheckInTime = currentMinutes >= 7 * 60 + 30 && currentMinutes <= 8 * 60; // 07:30 - 08:00
+    const isCheckOutTime = currentMinutes >= 15 * 60 + 30 && currentMinutes <= 16 * 60; // 15:30 - 16:00
+    const isOvertimeTime = currentMinutes >= 16 * 60 + 15; // >= 16:15
+
+    if (!isCheckInTime && !isCheckOutTime && !isOvertimeTime) {
+        setLastScanned({ name: emp.name, time: `Gagal: Belum waktunya absen (${currentTimeStr})` });
+        return false;
+    }
+
+    let overtimeHours = 0;
+    if (isOvertimeTime) {
+        overtimeHours = Math.floor((currentMinutes - (16 * 60 + 15)) / 60) + 1;
+    }
+
+    setLocalRecords(prev => {
+        let employeeRecord = prev.find(r => r.employeeId === empId);
+        let newRecords = [...prev];
         if (!employeeRecord) {
-            newRecords.push({ employeeId: empId, days: {} });
+            employeeRecord = { employeeId: empId, days: {} };
+            newRecords.push(employeeRecord);
+        }
+
+        const currentDay = employeeRecord.days[todayStr] || { date: todayStr, isPresent: false, overtimeHours: 0 };
+        let updatedDay = { ...currentDay };
+        let successMsg = '';
+
+        if (isCheckInTime) {
+            if (updatedDay.checkInTime) {
+                successMsg = `Sudah absen masuk sebelumnya.`;
+            } else {
+                updatedDay.isPresent = true;
+                updatedDay.checkInTime = currentTimeStr;
+                successMsg = `Berhasil Absen Masuk!`;
+            }
+        } else if (isCheckOutTime || isOvertimeTime) {
+            if (updatedDay.checkOutTime) {
+                successMsg = `Sudah absen pulang sebelumnya.`;
+            } else {
+                updatedDay.isPresent = true; 
+                updatedDay.checkOutTime = currentTimeStr;
+                updatedDay.overtimeHours = overtimeHours;
+                successMsg = `Berhasil Absen Pulang! ${overtimeHours > 0 ? `(Lembur: ${overtimeHours} jam)` : ''}`;
+            }
         }
 
         newRecords = newRecords.map(rec => {
             if (rec.employeeId !== empId) return rec;
-            const currentDay = rec.days[todayStr] || { date: todayStr, isPresent: false, overtimeHours: 0 };
             return {
                 ...rec,
                 days: {
                     ...rec.days,
-                    [todayStr]: { ...currentDay, isPresent: true }
+                    [todayStr]: updatedDay
                 }
             };
         });
-        setLocalRecords(newRecords);
-        onUpdate(newRecords);
-        setLastScanned({ name: emp.name, time: new Date().toLocaleTimeString() });
-        return true;
-    } 
-    return false;
+
+        setTimeout(() => onUpdate(newRecords), 0);
+        setLastScanned({ name: emp.name, time: `${currentTimeStr} - ${successMsg}` });
+        return newRecords;
+    });
+
+    return true;
   };
+
+  useEffect(() => {
+      processScanRef.current = processScan;
+  }, [processScan]);
 
   const handleManualScan = (e: React.FormEvent) => {
     e.preventDefault();
     const empId = scanInput.trim();
     if (!empId) return;
     
-    if (processScan(empId)) {
+    if (processScanRef.current && processScanRef.current(empId)) {
         setScanInput('');
     } else {
-        alert('ID Karyawan tidak ditemukan di proyek ini!');
         setScanInput('');
     }
   };
@@ -205,14 +264,15 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
   // Start Camera Logic
   useEffect(() => {
-    if (showCamera && viewMode === 'scan') {
+    if (viewMode === 'scan') {
         const scanner = new Html5QrcodeScanner(
             "reader", 
             { fps: 10, qrbox: { width: 250, height: 250 } },
             false
         );
         scanner.render((decodedText) => {
-            if (processScan(decodedText)) {
+            if (processScanRef.current) {
+                processScanRef.current(decodedText);
             }
         }, (errorMessage) => {
         });
@@ -224,7 +284,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
             }
         };
     }
-  }, [showCamera, viewMode, localRecords, projectEmployees]);
+  }, [viewMode]);
 
   const saveChanges = () => {
     onUpdate(localRecords);
@@ -280,7 +340,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                 </div>
             </button>
             <button
-                onClick={() => { setViewMode('scan'); setShowCamera(false); }}
+                onClick={() => { setViewMode('scan'); }}
                 className={`flex-1 md:flex-none px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-sm ${viewMode === 'scan' ? 'bg-white dark:bg-gray-700 text-brand-700 dark:text-brand-300 shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 shadow-none bg-transparent'}`}
             >
                 <div className="flex items-center justify-center gap-2">
@@ -484,29 +544,20 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                     <QrCode className="w-10 h-10 text-brand-600 dark:text-brand-400" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Absensi QR Code</h3>
-                <p className="text-gray-500 dark:text-gray-400 mt-2">Gunakan Kamera atau input manual ID</p>
+                <p className="text-gray-500 dark:text-gray-400 mt-2">Arahkan QR Code ke kamera</p>
+                <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl text-left inline-block">
+                    <p className="font-bold mb-1">Jadwal Absen:</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                        <li>Masuk: 07:30 - 08:00</li>
+                        <li>Pulang: 15:30 - 16:00</li>
+                        <li>Lembur: &gt; 16:15 (Dihitung per jam)</li>
+                    </ul>
+                </div>
             </div>
 
-            {/* Camera Area */}
-            {showCamera ? (
-                <div className="mb-8 animate-in zoom-in duration-300">
-                    <div id="reader" className="w-full max-w-sm mx-auto border-4 border-brand-500 rounded-2xl overflow-hidden shadow-2xl"></div>
-                    <button 
-                        onClick={() => setShowCamera(false)}
-                        className="mt-6 text-red-600 dark:text-red-400 font-bold text-sm hover:underline bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-full"
-                    >
-                        Tutup Kamera
-                    </button>
-                </div>
-            ) : (
-                 <button 
-                    onClick={() => setShowCamera(true)}
-                    className="mb-10 bg-brand-600 text-white px-8 py-4 rounded-xl font-bold shadow-xl shadow-brand-600/30 hover:bg-brand-700 transition-all flex items-center gap-3 mx-auto transform hover:scale-105"
-                >
-                    <Smartphone className="w-6 h-6" />
-                    Buka Kamera
-                </button>
-            )}
+            <div className="mb-8 animate-in zoom-in duration-300">
+                <div id="reader" className="w-full max-w-sm mx-auto border-4 border-brand-500 rounded-2xl overflow-hidden shadow-2xl"></div>
+            </div>
 
             <div className="relative border-t border-gray-100 dark:border-gray-700 pt-8">
                 <p className="text-gray-400 text-xs mb-4 font-bold uppercase tracking-widest">Input ID Manual</p>
@@ -523,15 +574,15 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
             </div>
 
             {lastScanned && (
-                <div className="mt-8 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl p-6 animate-in slide-in-from-bottom duration-500">
-                    <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-400 font-bold text-lg mb-2">
-                        <div className="bg-green-500 text-white rounded-full p-1">
-                            <Check className="w-4 h-4" />
+                <div className={`mt-8 border rounded-2xl p-6 animate-in slide-in-from-bottom duration-500 ${lastScanned.time.includes('Gagal') || lastScanned.time.includes('Tidak valid') ? 'bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800' : 'bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-800'}`}>
+                    <div className={`flex items-center justify-center gap-2 font-bold text-lg mb-2 ${lastScanned.time.includes('Gagal') || lastScanned.time.includes('Tidak valid') ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+                        <div className={`${lastScanned.time.includes('Gagal') || lastScanned.time.includes('Tidak valid') ? 'bg-red-500' : 'bg-green-500'} text-white rounded-full p-1`}>
+                            {lastScanned.time.includes('Gagal') || lastScanned.time.includes('Tidak valid') ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                         </div>
-                        Berhasil Absen!
+                        {lastScanned.time.includes('Gagal') || lastScanned.time.includes('Tidak valid') ? 'Peringatan' : 'Berhasil!'}
                     </div>
                     <p className="text-gray-900 dark:text-white text-2xl font-bold">{lastScanned.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1">{lastScanned.time}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mt-2">{lastScanned.time}</p>
                 </div>
             )}
         </div>

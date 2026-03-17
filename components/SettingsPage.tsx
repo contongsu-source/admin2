@@ -251,7 +251,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       const link = document.createElement('a');
       link.href = url;
       const date = new Date().toISOString().split('T')[0];
-      link.download = `backup_sba_${date}.json`;
+      link.download = `backup_sbm_${date}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

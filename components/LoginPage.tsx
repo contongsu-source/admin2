@@ -34,11 +34,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isLoading }) => {
             <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-6">
                <Building2 className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Sembilan Bintang Abadi</h1>
+            <h1 className="text-3xl font-bold mb-2">SBM Management</h1>
             <p className="text-brand-100 text-sm">Sistem Manajemen Terpadu Absensi, Gaji, & Material Proyek.</p>
           </div>
           <div className="relative z-10 text-xs text-brand-200 mt-8 md:mt-0">
-            &copy; 2026 SBA Management System
+            &copy; 2026 SBM Management System
           </div>
         </div>
 

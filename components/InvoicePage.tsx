@@ -58,7 +58,7 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state }) => {
         {/* Header */}
         <div className="flex justify-between items-start mb-12 border-b pb-8">
             <div className="flex items-center gap-4">
-                <div className="text-4xl font-bold text-red-600 tracking-tighter">SB<span className="text-blue-600">A</span></div>
+                <div className="text-4xl font-bold text-red-600 tracking-tighter">SB<span className="text-blue-600">M</span></div>
                 <div>
                     <h1 className="text-xl font-bold text-gray-800 uppercase">{companyProfile.name}</h1>
                     <p className="text-xs text-gray-500 font-bold tracking-wider uppercase">Jasa Kontruksi dan Perdagangan Umum</p>
