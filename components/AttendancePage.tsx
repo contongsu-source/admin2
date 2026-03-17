@@ -126,6 +126,37 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   const lastScanTimeRef = useRef<Record<string, number>>({});
   const processScanRef = useRef<((empId: string) => boolean) | null>(null);
 
+  const playBeep = (type: 'success' | 'error') => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      if (type === 'success') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+        osc.stop(ctx.currentTime + 0.1);
+      } else {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(300, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.3);
+        osc.stop(ctx.currentTime + 0.3);
+      }
+    } catch (e) {
+      console.error("Audio play failed", e);
+    }
+  };
+
   const processScan = (empId: string) => {
     const nowTime = Date.now();
     // Cooldown of 5 seconds per employee to prevent spam
@@ -137,6 +168,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
     const emp = projectEmployees.find(e => e.id === empId);
     if (!emp) {
         setLastScanned({ name: 'Tidak Dikenal', time: 'ID Karyawan tidak valid!' });
+        playBeep('error');
         return false;
     }
 
@@ -152,6 +184,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
     if (!isCheckInTime && !isCheckOutTime && !isOvertimeTime) {
         setLastScanned({ name: emp.name, time: `Gagal: Belum waktunya absen (${currentTimeStr})` });
+        playBeep('error');
         return false;
     }
 
@@ -172,22 +205,29 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
         let updatedDay = { ...currentDay };
         let successMsg = '';
 
+        let isSuccess = false;
+        let isDuplicate = false;
+
         if (isCheckInTime) {
             if (updatedDay.checkInTime) {
                 successMsg = `Sudah absen masuk sebelumnya.`;
+                isDuplicate = true;
             } else {
                 updatedDay.isPresent = true;
                 updatedDay.checkInTime = currentTimeStr;
                 successMsg = `Berhasil Absen Masuk!`;
+                isSuccess = true;
             }
         } else if (isCheckOutTime || isOvertimeTime) {
             if (updatedDay.checkOutTime) {
                 successMsg = `Sudah absen pulang sebelumnya.`;
+                isDuplicate = true;
             } else {
                 updatedDay.isPresent = true; 
                 updatedDay.checkOutTime = currentTimeStr;
                 updatedDay.overtimeHours = overtimeHours;
                 successMsg = `Berhasil Absen Pulang! ${overtimeHours > 0 ? `(Lembur: ${overtimeHours} jam)` : ''}`;
+                isSuccess = true;
             }
         }
 
@@ -202,8 +242,15 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
             };
         });
 
-        setTimeout(() => onUpdate(newRecords), 0);
-        setLastScanned({ name: emp.name, time: `${currentTimeStr} - ${successMsg}` });
+        setTimeout(() => {
+            onUpdate(newRecords);
+            setLastScanned({ name: emp.name, time: `${currentTimeStr} - ${successMsg}` });
+            if (isSuccess) {
+                playBeep('success');
+            } else if (isDuplicate) {
+                playBeep('error');
+            }
+        }, 0);
         return newRecords;
     });
 
