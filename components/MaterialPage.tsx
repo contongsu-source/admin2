@@ -172,25 +172,26 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Belanja Material</h2>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Pencatatan pengeluaran material & bukti bon</p>
         </div>
-        <div className="flex w-full md:w-auto gap-3">
-             <label className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer">
+        <div className="grid grid-cols-3 md:flex w-full md:w-auto gap-2 md:gap-3">
+             <label className="bg-green-600 hover:bg-green-700 text-white px-2 md:px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors cursor-pointer text-center">
                 <Upload className="w-4 h-4" />
-                Import Excel
+                <span className="hidden md:inline">Import Excel</span>
+                <span className="md:hidden">Import</span>
                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
             </label>
             <button 
               onClick={handlePrint}
-              className="flex-1 md:flex-none bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+              className="bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-2 md:px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors"
             >
               <Printer className="w-4 h-4" />
-              Cetak
+              <span>Cetak</span>
             </button>
             <button 
               onClick={() => setShowForm(true)}
-              className="flex-1 md:flex-none bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-600/20 active:scale-95"
+              className="bg-brand-600 hover:bg-brand-700 text-white px-2 md:px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-all shadow-lg shadow-brand-600/20 active:scale-95"
             >
-              <Plus className="w-5 h-5" />
-              Tambah
+              <Plus className="w-4 h-4" />
+              <span>Tambah</span>
             </button>
         </div>
       </div>
@@ -202,14 +203,16 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
       </div>
 
       {showForm && (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-in fade-in zoom-in-95 no-print mb-6 relative">
-            <button onClick={() => setShowForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X className="w-5 h-5"/></button>
-            <h3 className="text-lg font-bold mb-4 dark:text-white flex items-center gap-2">
-                <div className="bg-brand-100 dark:bg-brand-900/30 p-2 rounded-lg text-brand-600">
-                    <Plus className="w-4 h-4" />
-                </div>
-                Input Material Baru
-            </h3>
+        <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-in fade-in zoom-in-95 no-print mb-6">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold dark:text-white flex items-center gap-2">
+                    <div className="bg-brand-100 dark:bg-brand-900/30 p-2 rounded-lg text-brand-600">
+                        <Plus className="w-4 h-4" />
+                    </div>
+                    Input Material Baru
+                </h3>
+                <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg transition-colors"><X className="w-5 h-5"/></button>
+            </div>
             <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <div className="col-span-1">
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Tanggal</label>
@@ -221,7 +224,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
                         onChange={e => setNewItem({...newItem, date: e.target.value})}
                     />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 md:col-span-2">
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Nama Barang</label>
                     <input 
                         type="text" 
@@ -266,9 +269,9 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
                     />
                 </div>
                 
-                <div className="col-span-full">
+                <div className="col-span-1 md:col-span-2 lg:col-span-6">
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Foto Bukti Bon (Opsional)</label>
-                    <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                    <div className="flex flex-wrap items-center gap-4 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
                         <label className="cursor-pointer flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
                             <Upload className="w-4 h-4 text-brand-500" />
                             <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Upload Foto</span>
@@ -295,17 +298,17 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
                     </div>
                 </div>
 
-                <div className="col-span-full flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div className="col-span-1 md:col-span-2 lg:col-span-6 flex flex-col-reverse sm:flex-row justify-end gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <button 
                         type="button"
                         onClick={() => setShowForm(false)}
-                        className="px-5 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-sm font-bold transition-colors"
+                        className="w-full sm:w-auto px-5 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-sm font-bold transition-colors text-center"
                     >
                         Batal
                     </button>
                     <button 
                         type="submit"
-                        className="px-6 py-2.5 bg-brand-600 text-white hover:bg-brand-700 rounded-xl text-sm font-bold shadow-lg shadow-brand-600/20 transition-all active:scale-95"
+                        className="w-full sm:w-auto px-6 py-2.5 bg-brand-600 text-white hover:bg-brand-700 rounded-xl text-sm font-bold shadow-lg shadow-brand-600/20 transition-all active:scale-95 text-center"
                     >
                         Simpan Item
                     </button>
