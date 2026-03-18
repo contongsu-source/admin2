@@ -128,5 +128,6 @@ export const INITIAL_STATE: AppState = {
   attendance: INITIAL_ATTENDANCE,
   materials: INITIAL_MATERIALS,
   pettyCash: INITIAL_PETTY_CASH,
+  incomingFunds: { 'p1': [], 'p2': [] },
   currentProjectId: 'p1',
 };

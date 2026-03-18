@@ -7,7 +7,7 @@ import { MaterialPage } from './components/MaterialPage';
 import { InvoicePage } from './components/InvoicePage';
 import { SettingsPage } from './components/SettingsPage';
 import { PettyCashPage } from './components/PettyCashPage';
-import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, prepareStateForSync } from './types';
+import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
 import { Cloud, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -34,7 +34,9 @@ const App: React.FC = () => {
     try {
       const savedState = localStorage.getItem('sba_local_data');
       if (savedState) {
-        return JSON.parse(savedState);
+        const parsed = JSON.parse(savedState);
+        if (!parsed.incomingFunds) parsed.incomingFunds = {};
+        return parsed;
       }
     } catch (e) {
       console.error("Failed to load state from local storage", e);
@@ -278,6 +280,16 @@ const App: React.FC = () => {
           pettyCash: {
               ...prev.pettyCash,
               [state.currentProjectId]: transactions
+          }
+      }));
+  };
+
+  const handleUpdateIncomingFunds = (projectId: string, funds: IncomingFund[]) => {
+      setState(prev => ({
+          ...prev,
+          incomingFunds: {
+              ...prev.incomingFunds,
+              [projectId]: funds
           }
       }));
   };
@@ -583,6 +595,7 @@ const App: React.FC = () => {
             onAddNewPeriod={handleAddNewPeriod}
             onAddProject={handleAddProject}
             onUpdateProject={handleUpdateProject}
+            onUpdateIncomingFunds={handleUpdateIncomingFunds}
             cloudId={cloudId}
             onSetCloudId={handleSetCloudId}
             onLoadCloudData={fetchCloudData}

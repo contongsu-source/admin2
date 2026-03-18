@@ -77,6 +77,13 @@ export interface CompanyProfile {
   city: string;
 }
 
+export interface IncomingFund {
+  id: string;
+  date: string;
+  source: string; // dari siapa
+  amount: number;
+}
+
 export interface AppState {
   companyProfile: CompanyProfile;
   projects: Project[];
@@ -85,6 +92,7 @@ export interface AppState {
   attendance: Record<string, AttendanceRecord[]>; // Keyed by Period ID
   materials: Record<string, MaterialItem[]>; // Keyed by Period ID
   pettyCash: Record<string, PettyCashTransaction[]>; // Keyed by Project ID
+  incomingFunds: Record<string, IncomingFund[]>; // Keyed by Project ID
   currentProjectId: string;
 }
 
