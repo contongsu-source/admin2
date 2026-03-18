@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { AppState, CompanyProfile, Project, ProjectPeriod, prepareStateForSync } from '../types';
-import { Save, Trash2, Calendar, Plus, Cloud, Copy, Download, Upload, FileJson, Printer } from 'lucide-react';
+import { AppState, CompanyProfile, Project, ProjectPeriod, IncomingFund, prepareStateForSync } from '../types';
+import { Save, Trash2, Calendar, Plus, Cloud, Copy, Download, Upload, FileJson, Printer, Edit2, X } from 'lucide-react';
 import { ProjectReportPrint } from './ProjectReportPrint';
 import { useReactToPrint } from 'react-to-print';
 
@@ -12,6 +12,7 @@ interface SettingsPageProps {
   onAddNewPeriod: (projectId: string, startDate: string, endDate: string) => void;
   onAddProject: (name: string, clientName: string, clientAddress: string, startDate: string, endDate: string, budget?: number, status?: 'Aktif' | 'Selesai' | 'Pending') => void;
   onUpdateProject: (projectId: string, updates: Partial<Project>) => void;
+  onUpdateIncomingFunds: (projectId: string, funds: IncomingFund[]) => void;
   cloudId: string | null;
   onSetCloudId: (id: string | null) => void;
   onLoadCloudData: (id: string) => Promise<void>;
@@ -26,6 +27,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     onAddNewPeriod,
     onAddProject,
     onUpdateProject,
+    onUpdateIncomingFunds,
     cloudId,
     onSetCloudId,
     onLoadCloudData,
@@ -62,6 +64,32 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     budget: 0,
     status: 'Aktif' as 'Aktif' | 'Selesai' | 'Pending'
   });
+
+  // Incoming Funds State
+  const [managingFundsFor, setManagingFundsFor] = useState<string | null>(null);
+  const [newFund, setNewFund] = useState({ date: new Date().toISOString().split('T')[0], source: '', amount: 0 });
+
+  const handleAddFund = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!managingFundsFor || !newFund.source || newFund.amount <= 0) return;
+    
+    const projectFunds = state.incomingFunds[managingFundsFor] || [];
+    const newFundItem: IncomingFund = {
+        id: `fund-${Date.now()}`,
+        date: newFund.date,
+        source: newFund.source,
+        amount: newFund.amount
+    };
+    
+    onUpdateIncomingFunds(managingFundsFor, [...projectFunds, newFundItem]);
+    setNewFund({ date: new Date().toISOString().split('T')[0], source: '', amount: 0 });
+  };
+
+  const handleDeleteFund = (projectId: string, fundId: string) => {
+      if (!confirm('Hapus dana masuk ini?')) return;
+      const projectFunds = state.incomingFunds[projectId] || [];
+      onUpdateIncomingFunds(projectId, projectFunds.filter(f => f.id !== fundId));
+  };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -745,7 +773,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                         // const pettyCash = state.pettyCash[project.id] || [];
                         // totalTerpakai += pettyCash.filter(t => t.type === 'out').reduce((sum, t) => sum + t.amount, 0);
                         
-                        const budget = project.budget || 0;
+                        const projectFunds = state.incomingFunds[project.id] || [];
+                        const totalIncomingFunds = projectFunds.reduce((sum, f) => sum + f.amount, 0);
+                        const budget = (project.budget || 0) + totalIncomingFunds;
                         const sisa = budget - totalTerpakai;
 
                         return (
@@ -768,15 +798,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                     <span className="hidden print:inline font-medium text-gray-900">{project.status || 'Aktif'}</span>
                                 </td>
                                 <td className="px-4 py-3 text-right print:px-2 print:py-2">
-                                    <div className="print:hidden">
-                                        <input 
-                                            type="number" 
-                                            value={project.budget || 0}
-                                            onChange={(e) => onUpdateProject(project.id, { budget: parseInt(e.target.value) || 0 })}
-                                            className="w-32 text-right border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-2 py-1 text-xs"
-                                        />
+                                    <div className="print:hidden flex flex-col items-end gap-1">
+                                        <span className="font-bold text-gray-900 dark:text-white">Rp {budget.toLocaleString('id-ID')}</span>
+                                        <button 
+                                            onClick={() => setManagingFundsFor(project.id)}
+                                            className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-1"
+                                        >
+                                            <Edit2 className="w-3 h-3" />
+                                            Rincian Dana
+                                        </button>
                                     </div>
-                                    <span className="hidden print:inline text-gray-900">Rp {(project.budget || 0).toLocaleString('id-ID')}</span>
+                                    <span className="hidden print:inline text-gray-900">Rp {budget.toLocaleString('id-ID')}</span>
                                 </td>
                                 <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 font-medium print:px-2 print:py-2 print:text-gray-900">
                                     Rp {totalTerpakai.toLocaleString('id-ID')}
@@ -807,6 +839,138 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               {projectToPrint && <ProjectReportPrint state={state} projectId={projectToPrint} />}
           </div>
       </div>
+
+      {/* Incoming Funds Modal */}
+      {managingFundsFor && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                          Rincian Dana Masuk
+                          <span className="block text-sm font-normal text-gray-500 dark:text-gray-400">
+                              {state.projects.find(p => p.id === managingFundsFor)?.name}
+                          </span>
+                      </h3>
+                      <button 
+                          onClick={() => setManagingFundsFor(null)}
+                          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      >
+                          <X className="w-5 h-5" />
+                      </button>
+                  </div>
+                  
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                      <form onSubmit={handleAddFund} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                          <div className="sm:col-span-1">
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tanggal</label>
+                              <input 
+                                  type="date" 
+                                  value={newFund.date}
+                                  onChange={e => setNewFund({...newFund, date: e.target.value})}
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm"
+                                  required
+                              />
+                          </div>
+                          <div className="sm:col-span-1">
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Dari Siapa</label>
+                              <input 
+                                  type="text" 
+                                  value={newFund.source}
+                                  onChange={e => setNewFund({...newFund, source: e.target.value})}
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm"
+                                  placeholder="Contoh: Bpk. Budi"
+                                  required
+                              />
+                          </div>
+                          <div className="sm:col-span-1">
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Jumlah (Rp)</label>
+                              <input 
+                                  type="number" 
+                                  value={newFund.amount || ''}
+                                  onChange={e => setNewFund({...newFund, amount: parseInt(e.target.value) || 0})}
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm"
+                                  placeholder="Contoh: 5000000"
+                                  required
+                              />
+                          </div>
+                          <div className="sm:col-span-1">
+                              <button type="submit" className="w-full bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center justify-center gap-2">
+                                  <Plus className="w-4 h-4" />
+                                  Tambah
+                              </button>
+                          </div>
+                      </form>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-4">
+                      <div className="mb-4">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Anggaran Awal (Legacy)</label>
+                          <div className="flex items-center gap-2">
+                              <input 
+                                  type="number" 
+                                  value={state.projects.find(p => p.id === managingFundsFor)?.budget || 0}
+                                  onChange={(e) => onUpdateProject(managingFundsFor, { budget: parseInt(e.target.value) || 0 })}
+                                  className="w-48 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm"
+                              />
+                              <span className="text-xs text-gray-500 dark:text-gray-400">Gunakan ini jika tidak ingin merinci dana masuk.</span>
+                          </div>
+                      </div>
+
+                      <table className="w-full text-sm text-left">
+                          <thead className="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-xs font-semibold">
+                              <tr>
+                                  <th className="px-4 py-3">Tanggal</th>
+                                  <th className="px-4 py-3">Dari Siapa</th>
+                                  <th className="px-4 py-3 text-right">Jumlah</th>
+                                  <th className="px-4 py-3 text-center">Aksi</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                              {(state.incomingFunds[managingFundsFor] || []).length === 0 ? (
+                                  <tr>
+                                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                          Belum ada rincian dana masuk.
+                                      </td>
+                                  </tr>
+                              ) : (
+                                  (state.incomingFunds[managingFundsFor] || []).map(fund => (
+                                      <tr key={fund.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                          <td className="px-4 py-3 text-gray-900 dark:text-white">
+                                              {new Date(fund.date).toLocaleDateString('id-ID')}
+                                          </td>
+                                          <td className="px-4 py-3 text-gray-900 dark:text-white font-medium">
+                                              {fund.source}
+                                          </td>
+                                          <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-medium">
+                                              Rp {fund.amount.toLocaleString('id-ID')}
+                                          </td>
+                                          <td className="px-4 py-3 text-center">
+                                              <button 
+                                                  onClick={() => handleDeleteFund(managingFundsFor, fund.id)}
+                                                  className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-red-900/30"
+                                                  title="Hapus Dana"
+                                              >
+                                                  <Trash2 className="w-4 h-4" />
+                                              </button>
+                                          </td>
+                                      </tr>
+                                  ))
+                              )}
+                          </tbody>
+                          <tfoot className="bg-gray-50 dark:bg-gray-700/50 font-bold">
+                              <tr>
+                                  <td colSpan={2} className="px-4 py-3 text-right text-gray-900 dark:text-white">Total Rincian Dana:</td>
+                                  <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">
+                                      Rp {(state.incomingFunds[managingFundsFor] || []).reduce((sum, f) => sum + f.amount, 0).toLocaleString('id-ID')}
+                                  </td>
+                                  <td></td>
+                              </tr>
+                          </tfoot>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      )}
 
     </div>
   );

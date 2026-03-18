@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState, AttendanceRecord, ProjectPeriod, Employee } from '../types';
 import { Check, QrCode, Search, Smartphone, Clock, Users, Plus, X, Trash2, Save, Edit2, Printer, List, Table, Upload } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
 
 interface AttendancePageProps {
@@ -39,7 +39,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
   const [isEditing, setIsEditing] = useState(false);
   const [showEmpManager, setShowEmpManager] = useState(false); // Modal state
-  const [viewMode, setViewMode] = useState<'table' | 'scan' | 'qr_list'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'scan' | 'qr_list'>('scan');
   const [localRecords, setLocalRecords] = useState<AttendanceRecord[]>(records);
   const [scanInput, setScanInput] = useState('');
   const [lastScanned, setLastScanned] = useState<{name: string, time: string} | null>(null);
@@ -51,7 +51,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   const [editEmpData, setEditEmpData] = useState<Partial<Employee>>({});
 
   // Camera scan state
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   // Keep local records in sync if parent updates, unless editing
   useEffect(() => {
@@ -210,7 +210,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
         if (isCheckInTime) {
             if (updatedDay.checkInTime) {
-                successMsg = `Sudah absen masuk sebelumnya.`;
+                successMsg = `Gagal: Sudah absen masuk sebelumnya.`;
                 isDuplicate = true;
             } else {
                 updatedDay.isPresent = true;
@@ -220,7 +220,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
             }
         } else if (isCheckOutTime || isOvertimeTime) {
             if (updatedDay.checkOutTime) {
-                successMsg = `Sudah absen pulang sebelumnya.`;
+                successMsg = `Gagal: Sudah absen pulang sebelumnya.`;
                 isDuplicate = true;
             } else {
                 updatedDay.isPresent = true; 
@@ -312,22 +312,37 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   // Start Camera Logic
   useEffect(() => {
     if (viewMode === 'scan') {
-        const scanner = new Html5QrcodeScanner(
-            "reader", 
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            false
-        );
-        scanner.render((decodedText) => {
+        const html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
             if (processScanRef.current) {
                 processScanRef.current(decodedText);
             }
         }, (errorMessage) => {
+            // parse error, ignore
+        }).catch((err) => {
+            console.error("Error starting scanner with environment camera, falling back to default", err);
+            html5QrCode.start({ facingMode: "user" }, config, (decodedText) => {
+                if (processScanRef.current) {
+                    processScanRef.current(decodedText);
+                }
+            }, (errorMessage) => {
+                // parse error, ignore
+            }).catch((err2) => {
+                console.error("Error starting scanner with user camera", err2);
+            });
         });
-        scannerRef.current = scanner;
+
+        scannerRef.current = html5QrCode;
 
         return () => {
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch(console.error);
+            if (html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                }).catch(console.error);
+            } else {
+                html5QrCode.clear();
             }
         };
     }
