@@ -808,7 +808,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                             Rincian Dana
                                         </button>
                                     </div>
-                                    <span className="hidden print:inline text-gray-900">Rp {budget.toLocaleString('id-ID')}</span>
+                                    <span className="hidden print:block text-gray-900 font-bold">Rp {budget.toLocaleString('id-ID')}</span>
                                 </td>
                                 <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 font-medium print:px-2 print:py-2 print:text-gray-900">
                                     Rp {totalTerpakai.toLocaleString('id-ID')}
