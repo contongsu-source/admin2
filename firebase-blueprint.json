@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "AppState": {
+      "title": "AppState",
+      "description": "The entire application state for a user",
+      "type": "object",
+      "properties": {
+        "companyProfile": { "type": "object" },
+        "projects": { "type": "array" },
+        "periods": { "type": "array" },
+        "employees": { "type": "array" },
+        "attendance": { "type": "object" },
+        "materials": { "type": "object" },
+        "pettyCash": { "type": "object" },
+        "incomingFunds": { "type": "object" },
+        "currentProjectId": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/AppState"
+      },
+      "description": "User's application state"
+    }
+  }
+}

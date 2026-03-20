@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AttendancePage } from './components/AttendancePage';
@@ -9,7 +9,61 @@ import { SettingsPage } from './components/SettingsPage';
 import { PettyCashPage } from './components/PettyCashPage';
 import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
-import { Cloud, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Cloud, CheckCircle2, AlertCircle, LogIn } from 'lucide-react';
+import { auth, db, loginWithGoogle, logout } from './firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, onSnapshot, setDoc, getDocFromServer } from 'firebase/firestore';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 const App: React.FC = () => {
   // --- Dark Mode State ---
@@ -29,6 +83,31 @@ const App: React.FC = () => {
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
+  // --- Auth State ---
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  useEffect(() => {
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration. ");
+        }
+      }
+    }
+    testConnection();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // --- App Data State ---
   const [state, setState] = useState<AppState>(() => {
     try {
@@ -47,9 +126,9 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   
   // --- Cloud Sync State ---
-  const [cloudId, setCloudId] = useState<string | null>(() => localStorage.getItem('sba_cloud_id'));
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'saved' | 'error'>('idle');
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
+  const lastCloudStateRef = useRef<string>('');
 
   // Save to LocalStorage always (as backup)
   useEffect(() => {
@@ -126,84 +205,60 @@ const App: React.FC = () => {
     }
   }, [state.currentProjectId, state.materials]);
 
-  // INITIAL LOAD FROM CLOUD
+  // INITIAL LOAD FROM FIRESTORE
   useEffect(() => {
-      if (cloudId && !isLoadingCloud) {
-          fetchCloudData(cloudId);
-      }
-  }, []); // Run once on mount
+      if (!isAuthReady || !user) return;
 
-  const fetchCloudData = async (id: string) => {
       setIsLoadingCloud(true);
-      setSyncStatus('syncing');
-      try {
-          const response = await fetch(`https://jsonblob.com/api/jsonBlob/${id}`);
-          if (response.ok) {
-              const data = await response.json();
-              if (data && data.companyProfile) { // Simple validation
-                  setState(data);
-                  setCloudId(id);
-                  localStorage.setItem('sba_cloud_id', id);
-                  setSyncStatus('saved');
+      const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+          if (docSnap.exists()) {
+              const data = docSnap.data() as AppState;
+              if (data && data.companyProfile) {
+                  if (!data.incomingFunds) data.incomingFunds = {};
+                  const stringified = JSON.stringify(data);
+                  if (lastCloudStateRef.current !== stringified) {
+                      lastCloudStateRef.current = stringified;
+                      setState(data);
+                  }
               }
-          } else {
-              setSyncStatus('error');
           }
-      } catch (error) {
-          console.error("Cloud Fetch Error", error);
-          setSyncStatus('error');
-      } finally {
           setIsLoadingCloud(false);
-          setTimeout(() => setSyncStatus('idle'), 2000);
-      }
-  };
+      }, (error) => {
+          setSyncStatus('error');
+          setIsLoadingCloud(false);
+          handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
+      });
 
-  // AUTO SYNC TO CLOUD
+      return () => unsubscribe();
+  }, [user, isAuthReady]);
+
+  // AUTO SYNC TO FIRESTORE
   useEffect(() => {
-    // Only sync if we have a cloudId and we are NOT currently loading initial data
-    if (cloudId && !isLoadingCloud) {
-        setSyncStatus('syncing');
+    if (!isAuthReady || !user || isLoadingCloud) return;
+
+    const syncState = prepareStateForSync(state);
+    const stringified = JSON.stringify(syncState);
+    if (lastCloudStateRef.current === stringified) return;
+
+    setSyncStatus('syncing');
+    
+    // Debounce the save
+    const timer = setTimeout(async () => {
+        try {
+            lastCloudStateRef.current = stringified;
+            await setDoc(doc(db, 'users', user.uid), syncState);
+            setSyncStatus('saved');
+        } catch (error) {
+            setSyncStatus('error');
+            handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+        }
         
-        // Debounce the save
-        const timer = setTimeout(async () => {
-            try {
-                const syncState = prepareStateForSync(state);
-                const response = await fetch(`https://jsonblob.com/api/jsonBlob/${cloudId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(syncState)
-                });
-                
-                if (response.ok) {
-                    setSyncStatus('saved');
-                } else {
-                    setSyncStatus('error');
-                }
-            } catch (error) {
-                console.error("Cloud Save Error", error);
-                setSyncStatus('error');
-            }
-            
-            // Revert to idle after showing status
-            setTimeout(() => setSyncStatus('idle'), 3000);
-        }, 2000); 
+        // Revert to idle after showing status
+        setTimeout(() => setSyncStatus('idle'), 3000);
+    }, 2000); 
 
-        return () => clearTimeout(timer);
-    }
-  }, [state, cloudId, isLoadingCloud]);
-
-  const handleSetCloudId = (id: string | null) => {
-      if (id) {
-          setCloudId(id);
-          localStorage.setItem('sba_cloud_id', id);
-      } else {
-          setCloudId(null);
-          localStorage.removeItem('sba_cloud_id');
-      }
-  };
+    return () => clearTimeout(timer);
+  }, [state, user, isAuthReady, isLoadingCloud]);
 
   const handleUpdateAttendance = (newRecords: AttendanceRecord[]) => {
     const project = state.projects.find(p => p.id === state.currentProjectId);
@@ -596,9 +651,6 @@ const App: React.FC = () => {
             onAddProject={handleAddProject}
             onUpdateProject={handleUpdateProject}
             onUpdateIncomingFunds={handleUpdateIncomingFunds}
-            cloudId={cloudId}
-            onSetCloudId={handleSetCloudId}
-            onLoadCloudData={fetchCloudData}
             onImportData={handleImportData}
         />;
       default:
@@ -613,6 +665,16 @@ const App: React.FC = () => {
       }));
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setState(INITIAL_STATE);
+      localStorage.removeItem('sba_local_data');
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
   return (
     <>
         <Layout 
@@ -623,6 +685,9 @@ const App: React.FC = () => {
             onPeriodChange={handlePeriodChange}
             isDarkMode={isDarkMode}
             onToggleTheme={toggleDarkMode}
+            user={user}
+            onLogin={loginWithGoogle}
+            onLogout={handleLogout}
         >
         {renderContent()}
         </Layout>

@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - companyProfile: map
+    //   - projects: list
+    //   - periods: list
+    //   - employees: list
+    //   - attendance: map
+    //   - materials: map
+    //   - pettyCash: map
+    //   - incomingFunds: map
+    //   - currentProjectId: string
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidAppState() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['companyProfile', 'projects', 'periods', 'employees', 'attendance', 'materials', 'pettyCash', 'incomingFunds', 'currentProjectId']) &&
+             data.companyProfile is map &&
+             data.projects is list &&
+             data.periods is list &&
+             data.employees is list &&
+             data.attendance is map &&
+             data.materials is map &&
+             data.pettyCash is map &&
+             data.incomingFunds is map &&
+             data.currentProjectId is string;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidAppState();
+      allow update: if isOwner(userId) && isValidAppState();
+      allow delete: if isOwner(userId);
+    }
+  }
+}
