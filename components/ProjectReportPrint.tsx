@@ -73,7 +73,7 @@ export const ProjectReportPrint: React.FC<ProjectReportPrintProps> = ({ state, p
     const periodString = earliestDate ? `${formatDate(earliestDate)} s/d ${currentDateShort}` : '-';
 
     return (
-        <div className="hidden print:block print:w-full print:bg-white print:text-black">
+        <div className="hidden print:!block print:w-full print:bg-white print:text-black">
             <div className="mb-8">
                 <h1 className="text-2xl font-bold mb-2">Laporan Proyek: {project.name.toUpperCase()}</h1>
                 <p className="text-sm text-gray-600">Dicetak pada: {currentDate}</p>

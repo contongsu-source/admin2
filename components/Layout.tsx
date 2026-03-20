@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { AppState } from '../types';
-import { Menu, Moon, Sun, ChevronDown } from 'lucide-react';
+import { Menu, Moon, Sun, ChevronDown, LogIn, LogOut } from 'lucide-react';
+import { User } from 'firebase/auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,9 +13,12 @@ interface LayoutProps {
   onPeriodChange: (projectId: string, periodId: string) => void;
   isDarkMode: boolean;
   onToggleTheme: () => void;
+  user: User | null;
+  onLogin: () => void;
+  onLogout: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeView, state, onProjectChange, onPeriodChange, isDarkMode, onToggleTheme }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeView, state, onProjectChange, onPeriodChange, isDarkMode, onToggleTheme, user, onLogin, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
@@ -88,15 +92,31 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
              </button>
              
              <div className="flex items-center gap-3 pl-2 md:border-l border-gray-200 dark:border-gray-700">
-                 <div className="hidden md:flex flex-col items-end">
-                     <span className="text-sm font-bold text-gray-800 dark:text-gray-100">Admin</span>
-                     <span className="text-[10px] text-green-600 dark:text-green-400 font-bold flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online
-                     </span>
-                 </div>
-                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 shadow-md shadow-brand-500/30 flex items-center justify-center text-white font-bold text-xs md:text-sm ring-2 ring-white dark:ring-gray-800">
-                    EK
-                 </div>
+                {user ? (
+                  <>
+                    <div className="hidden md:flex flex-col items-end">
+                        <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{user.displayName || 'User'}</span>
+                        <span className="text-[10px] text-green-600 dark:text-green-400 font-bold flex items-center gap-1">
+                           <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online
+                        </span>
+                    </div>
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="Profile" className="w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-white dark:ring-gray-800" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 shadow-md shadow-brand-500/30 flex items-center justify-center text-white font-bold text-xs md:text-sm ring-2 ring-white dark:ring-gray-800">
+                         {user.displayName?.substring(0, 2).toUpperCase() || 'U'}
+                      </div>
+                    )}
+                    <button onClick={onLogout} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors" title="Logout">
+                      <LogOut className="w-5 h-5" />
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={onLogin} className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium transition-colors shadow-sm">
+                    <LogIn className="w-4 h-4" />
+                    <span className="hidden sm:inline">Login</span>
+                  </button>
+                )}
              </div>
           </div>
         </header>

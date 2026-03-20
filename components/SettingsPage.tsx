@@ -13,9 +13,6 @@ interface SettingsPageProps {
   onAddProject: (name: string, clientName: string, clientAddress: string, startDate: string, endDate: string, budget?: number, status?: 'Aktif' | 'Selesai' | 'Pending') => void;
   onUpdateProject: (projectId: string, updates: Partial<Project>) => void;
   onUpdateIncomingFunds: (projectId: string, funds: IncomingFund[]) => void;
-  cloudId: string | null;
-  onSetCloudId: (id: string | null) => void;
-  onLoadCloudData: (id: string) => Promise<void>;
   onImportData: (data: AppState) => void;
 }
 
@@ -28,14 +25,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     onAddProject,
     onUpdateProject,
     onUpdateIncomingFunds,
-    cloudId,
-    onSetCloudId,
-    onLoadCloudData,
     onImportData
 }) => {
   const [profile, setProfile] = useState<CompanyProfile>(state.companyProfile);
-  const [inputCloudId, setInputCloudId] = useState('');
-  const [isSyncing, setIsSyncing] = useState(false);
   
   // Print Ref
   const printRef = useRef<HTMLDivElement>(null);
@@ -209,67 +201,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     }));
   };
 
-  // --- Cloud Sync Logic ---
-
-  const createNewCloud = async () => {
-      if(!confirm('Buat database cloud baru? Data saat ini akan diunggah dan Anda akan mendapatkan ID baru.')) return;
-      
-      setIsSyncing(true);
-      try {
-          const syncState = prepareStateForSync(state);
-          const response = await fetch('https://jsonblob.com/api/jsonBlob', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-              },
-              body: JSON.stringify(syncState)
-          });
-          
-          if (response.ok) {
-              const location = response.headers.get('Location');
-              if (location) {
-                  const newId = location.split('/').pop();
-                  if (newId) {
-                      onSetCloudId(newId);
-                      alert('Berhasil! Database Cloud dibuat. Simpan ID Anda untuk mengakses di perangkat lain.');
-                  }
-              }
-          } else {
-              alert('Gagal membuat database cloud. Coba lagi.');
-          }
-      } catch (error) {
-          console.error(error);
-          alert('Error koneksi internet.');
-      } finally {
-          setIsSyncing(false);
-      }
-  };
-
-  const connectToCloud = async () => {
-      if (!inputCloudId) return;
-      if (!confirm('Hubungkan ke ID ini? Data di perangkat ini akan DIGANTI dengan data dari Cloud.')) return;
-
-      setIsSyncing(true);
-      try {
-          await onLoadCloudData(inputCloudId);
-          alert('Berhasil terhubung dan sinkronisasi data!');
-          setInputCloudId('');
-      } catch (error) {
-          console.error(error);
-          alert('Gagal mengambil data. Pastikan ID Cloud benar.');
-      } finally {
-          setIsSyncing(false);
-      }
-  };
-
-  const copyToClipboard = () => {
-      if (cloudId) {
-          navigator.clipboard.writeText(cloudId);
-          alert('ID Cloud disalin ke clipboard!');
-      }
-  };
-
   // --- Manual Backup & Restore ---
   
   const handleBackup = () => {
@@ -324,86 +255,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <p className="text-gray-500 dark:text-gray-400">Kelola profil perusahaan, proyek, dan sinkronisasi data</p>
       </div>
 
-      {/* Cloud Sync Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-900 dark:to-indigo-900 p-6 rounded-xl shadow-lg text-white print:hidden">
-          <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                  <Cloud className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">Sinkronisasi Antar Perangkat</h3>
-                <p className="text-blue-100 text-sm">Akses data yang sama di perangkat lain</p>
-              </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Active Connection */}
-              <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-                  <h4 className="font-semibold mb-2 text-sm uppercase tracking-wider text-blue-200">Status Koneksi</h4>
-                  {cloudId ? (
-                      <div>
-                          <p className="text-xs mb-1">Terhubung ke Cloud ID:</p>
-                          <div className="flex gap-2">
-                              <code className="bg-black/30 px-3 py-2 rounded text-sm font-mono flex-1 overflow-hidden text-ellipsis">
-                                  {cloudId}
-                              </code>
-                              <button 
-                                onClick={copyToClipboard}
-                                className="p-2 bg-white/20 hover:bg-white/30 rounded transition" 
-                                title="Salin ID"
-                              >
-                                  <Copy className="w-4 h-4" />
-                              </button>
-                          </div>
-                          <div className="mt-3 flex items-center gap-2 text-xs text-green-300">
-                              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                              Sinkronisasi Otomatis Aktif
-                          </div>
-                      </div>
-                  ) : (
-                      <div className="text-center py-4">
-                          <p className="text-sm text-blue-100 mb-3">Belum terhubung ke Cloud</p>
-                          <button 
-                            onClick={createNewCloud}
-                            disabled={isSyncing}
-                            className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-50 transition w-full flex items-center justify-center gap-2"
-                          >
-                              {isSyncing ? 'Memproses...' : (
-                                  <>
-                                    <Upload className="w-4 h-4" />
-                                    Buat Database Baru
-                                  </>
-                              )}
-                          </button>
-                      </div>
-                  )}
-              </div>
-
-              {/* Connect Existing */}
-              <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-                  <h4 className="font-semibold mb-2 text-sm uppercase tracking-wider text-blue-200">Hubungkan Perangkat Lain</h4>
-                  <p className="text-xs text-blue-100 mb-2">
-                      Masukkan ID Cloud dari perangkat utama Anda di sini.
-                  </p>
-                  <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={inputCloudId}
-                        onChange={(e) => setInputCloudId(e.target.value)}
-                        placeholder="Tempel ID Cloud disini..."
-                        className="flex-1 px-3 py-2 rounded text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                      <button 
-                        onClick={connectToCloud}
-                        disabled={isSyncing || !inputCloudId}
-                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                          <Download className="w-4 h-4" />
-                      </button>
-                  </div>
-              </div>
-          </div>
-      </div>
+      {/* Cloud Sync Section - Removed as it's now handled automatically via Firebase */}
 
       {/* Manual Backup & Restore Section */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-900 dark:to-pink-900 p-6 rounded-xl shadow-lg text-white print:hidden">
@@ -782,6 +634,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                             <tr key={project.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 print:border-b print:border-gray-300 print:break-inside-avoid">
                                 <td className="px-4 py-3 font-medium text-gray-900 dark:text-white print:px-2 print:py-2 print:text-gray-900">
                                     {project.name}
+                                    {projectFunds.length > 0 && (
+                                        <div className="hidden print:!block mt-2 text-xs text-gray-600">
+                                            <div className="font-semibold mb-1">Rincian Dana Masuk:</div>
+                                            <ul className="list-disc pl-4">
+                                                {projectFunds.map(f => (
+                                                    <li key={f.id}>{f.source}: Rp {f.amount.toLocaleString('id-ID')}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="px-4 py-3 text-center print:px-2 print:py-2">
                                     <div className="print:hidden">
@@ -795,20 +657,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                             <option value="Selesai">Selesai</option>
                                         </select>
                                     </div>
-                                    <span className="hidden print:inline font-medium text-gray-900">{project.status || 'Aktif'}</span>
+                                    <span className="hidden print:!inline font-medium text-gray-900">{project.status || 'Aktif'}</span>
                                 </td>
                                 <td className="px-4 py-3 text-right print:px-2 print:py-2">
-                                    <div className="print:hidden flex flex-col items-end gap-1">
-                                        <span className="font-bold text-gray-900 dark:text-white">Rp {budget.toLocaleString('id-ID')}</span>
+                                    <div className="flex flex-col items-end gap-1 print:block print:text-right">
+                                        <span className="font-bold text-gray-900 dark:text-white print:text-gray-900">Rp {budget.toLocaleString('id-ID')}</span>
                                         <button 
                                             onClick={() => setManagingFundsFor(project.id)}
-                                            className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-1"
+                                            className="print:hidden text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-1"
                                         >
                                             <Edit2 className="w-3 h-3" />
                                             Rincian Dana
                                         </button>
                                     </div>
-                                    <span className="hidden print:block text-gray-900 font-bold">Rp {budget.toLocaleString('id-ID')}</span>
                                 </td>
                                 <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 font-medium print:px-2 print:py-2 print:text-gray-900">
                                     Rp {totalTerpakai.toLocaleString('id-ID')}
