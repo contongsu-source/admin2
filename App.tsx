@@ -115,6 +115,14 @@ const App: React.FC = () => {
       if (savedState) {
         const parsed = JSON.parse(savedState);
         if (!parsed.incomingFunds) parsed.incomingFunds = {};
+        if (typeof parsed.currentProjectId !== 'string') parsed.currentProjectId = '';
+        if (!parsed.companyProfile) parsed.companyProfile = INITIAL_STATE.companyProfile;
+        if (!parsed.projects) parsed.projects = [];
+        if (!parsed.periods) parsed.periods = [];
+        if (!parsed.employees) parsed.employees = [];
+        if (!parsed.attendance) parsed.attendance = {};
+        if (!parsed.materials) parsed.materials = {};
+        if (!parsed.pettyCash) parsed.pettyCash = {};
         return parsed;
       }
     } catch (e) {
@@ -215,6 +223,14 @@ const App: React.FC = () => {
               const data = docSnap.data() as AppState;
               if (data && data.companyProfile) {
                   if (!data.incomingFunds) data.incomingFunds = {};
+                  if (typeof data.currentProjectId !== 'string') data.currentProjectId = '';
+                  if (!data.projects) data.projects = [];
+                  if (!data.periods) data.periods = [];
+                  if (!data.employees) data.employees = [];
+                  if (!data.attendance) data.attendance = {};
+                  if (!data.materials) data.materials = {};
+                  if (!data.pettyCash) data.pettyCash = {};
+                  
                   const stringified = JSON.stringify(data);
                   if (lastCloudStateRef.current !== stringified) {
                       lastCloudStateRef.current = stringified;
@@ -246,7 +262,7 @@ const App: React.FC = () => {
     const timer = setTimeout(async () => {
         try {
             lastCloudStateRef.current = stringified;
-            await setDoc(doc(db, 'users', user.uid), syncState);
+            await setDoc(doc(db, 'users', user.uid), JSON.parse(stringified));
             setSyncStatus('saved');
         } catch (error) {
             setSyncStatus('error');
@@ -665,6 +681,19 @@ const App: React.FC = () => {
       }));
   };
 
+  const handleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (error: any) {
+      console.error("Login failed", error);
+      if (error.code === 'auth/unauthorized-domain') {
+          alert("Domain ini belum diizinkan di Firebase. Silakan tambahkan domain ini ke Authorized Domains di Firebase Console (Authentication -> Settings -> Authorized domains).");
+      } else {
+          alert("Gagal login: " + error.message);
+      }
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -686,7 +715,7 @@ const App: React.FC = () => {
             isDarkMode={isDarkMode}
             onToggleTheme={toggleDarkMode}
             user={user}
-            onLogin={loginWithGoogle}
+            onLogin={handleLogin}
             onLogout={handleLogout}
         >
         {renderContent()}

@@ -100,10 +100,10 @@ export const prepareStateForSync = (state: AppState): AppState => {
   const syncState = { ...state };
   syncState.materials = {};
   for (const periodId in state.materials) {
-    syncState.materials[periodId] = state.materials[periodId].map(item => ({
-      ...item,
-      receiptImage: undefined // Strip images to avoid payload too large errors
-    }));
+    syncState.materials[periodId] = state.materials[periodId].map(item => {
+      const { receiptImage, ...rest } = item;
+      return rest;
+    });
   }
   return syncState;
 };
