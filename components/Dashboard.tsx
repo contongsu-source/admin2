@@ -36,7 +36,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
         overtimeHours += day.overtimeHours;
       });
       
-      totalWages += (workDays * emp.dailyRate) + (overtimeHours * emp.overtimeRate);
+      const dailyRate = record.dailyRate ?? emp.dailyRate;
+      const overtimeRate = record.overtimeRate ?? emp.overtimeRate;
+      
+      totalWages += (workDays * dailyRate) + (overtimeHours * overtimeRate);
     });
     return totalWages;
   }, [attendanceRecords, projectEmployees]);
@@ -64,7 +67,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
                   if (day.isPresent) workDays++;
                   overtimeHours += day.overtimeHours || 0;
               });
-              overallTerpakai += (workDays * emp.dailyRate) + (overtimeHours * emp.overtimeRate);
+              
+              const dailyRate = record.dailyRate ?? emp.dailyRate;
+              const overtimeRate = record.overtimeRate ?? emp.overtimeRate;
+              
+              overallTerpakai += (workDays * dailyRate) + (overtimeHours * overtimeRate);
           }
       });
       

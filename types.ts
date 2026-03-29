@@ -30,6 +30,8 @@ export interface DailyAttendance {
 export interface AttendanceRecord {
   employeeId: string;
   days: Record<string, DailyAttendance>; // Keyed by date string
+  dailyRate?: number; // Rate specific to this period
+  overtimeRate?: number; // Overtime rate specific to this period
 }
 
 export interface MaterialItem {

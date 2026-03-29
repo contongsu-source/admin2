@@ -7,6 +7,7 @@ import { MaterialPage } from './components/MaterialPage';
 import { InvoicePage } from './components/InvoicePage';
 import { SettingsPage } from './components/SettingsPage';
 import { PettyCashPage } from './components/PettyCashPage';
+import { ConsolidatedReport } from './components/ConsolidatedReport';
 import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
 import { Cloud, CheckCircle2, AlertCircle, LogIn } from 'lucide-react';
@@ -441,10 +442,32 @@ const App: React.FC = () => {
   };
 
   const handleUpdateEmployee = (updatedEmp: Employee) => {
-      setState(prev => ({
-          ...prev,
-          employees: prev.employees.map(e => e.id === updatedEmp.id ? updatedEmp : e)
-      }));
+      setState(prev => {
+          const currentProject = prev.projects.find(p => p.id === prev.currentProjectId);
+          const currentPeriodId = currentProject?.currentPeriodId;
+          
+          let newAttendance = { ...prev.attendance };
+          
+          // If there is a current period, update the employee's rate in the current period's attendance record as well
+          if (currentPeriodId && newAttendance[currentPeriodId]) {
+              newAttendance[currentPeriodId] = newAttendance[currentPeriodId].map(record => {
+                  if (record.employeeId === updatedEmp.id) {
+                      return {
+                          ...record,
+                          dailyRate: updatedEmp.dailyRate,
+                          overtimeRate: updatedEmp.overtimeRate
+                      };
+                  }
+                  return record;
+              });
+          }
+
+          return {
+              ...prev,
+              employees: prev.employees.map(e => e.id === updatedEmp.id ? updatedEmp : e),
+              attendance: newAttendance
+          };
+      });
   };
 
   const handleDeleteEmployee = (empId: string) => {
@@ -492,11 +515,18 @@ const App: React.FC = () => {
             days[dateStr] = { date: dateStr, isPresent: false, overtimeHours: 0 };
         }
 
+        const emp = prev.employees.find(e => e.id === empId);
+        
         return {
             ...prev,
             attendance: {
                 ...prev.attendance,
-                [periodId]: [...existingRecords, { employeeId: empId, days }]
+                [periodId]: [...existingRecords, { 
+                    employeeId: empId, 
+                    days,
+                    dailyRate: emp?.dailyRate,
+                    overtimeRate: emp?.overtimeRate
+                }]
             }
         };
     });
@@ -538,7 +568,12 @@ const App: React.FC = () => {
               const dateStr = d.toISOString().split('T')[0];
               days[dateStr] = { date: dateStr, isPresent: false, overtimeHours: 0 };
           }
-          return { employeeId: emp.id, days };
+          return { 
+              employeeId: emp.id, 
+              days,
+              dailyRate: emp.dailyRate,
+              overtimeRate: emp.overtimeRate
+          };
       });
 
       setState(prev => ({
@@ -650,13 +685,16 @@ const App: React.FC = () => {
         return <PayrollPage 
             state={state} 
             onUpdateEmployee={handleUpdateEmployee}
+            onUpdateAttendance={handleUpdateAttendance}
         />;
       case 'materials':
         return <MaterialPage state={state} onUpdate={handleUpdateMaterials} />;
       case 'petty_cash':
         return <PettyCashPage state={state} onUpdate={handleUpdatePettyCash} />;
       case 'invoice':
-        return <InvoicePage state={state} />;
+        return <InvoicePage state={state} onChangeView={setCurrentView} />;
+      case 'consolidated_report':
+        return <ConsolidatedReport state={state} />;
       case 'settings':
         return <SettingsPage 
             state={state} 

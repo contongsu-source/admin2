@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { AppState, Employee, DailyAttendance } from '../types';
+import { AppState, Employee, DailyAttendance, AttendanceRecord } from '../types';
 import { Download, Printer, Edit2, Save, FileText } from 'lucide-react';
 import { toJpeg } from 'html-to-image';
 import { terbilang } from '../utils';
@@ -7,9 +7,10 @@ import { terbilang } from '../utils';
 interface PayrollPageProps {
   state: AppState;
   onUpdateEmployee?: (emp: Employee) => void;
+  onUpdateAttendance?: (records: AttendanceRecord[]) => void;
 }
 
-export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmployee }) => {
+export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmployee, onUpdateAttendance }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
   const records = state.attendance[currentPeriod?.id || ''] || [];
@@ -53,12 +54,18 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       }, 100);
   };
 
-  const updateRate = (emp: Employee, field: 'dailyRate' | 'overtimeRate', value: string) => {
-      if(onUpdateEmployee) {
-          onUpdateEmployee({
-              ...emp,
-              [field]: parseInt(value) || 0
+  const updateRate = (empId: string, field: 'dailyRate' | 'overtimeRate', value: string) => {
+      if(onUpdateAttendance) {
+          const newRecords = records.map(r => {
+              if (r.employeeId === empId) {
+                  return {
+                      ...r,
+                      [field]: parseInt(value) || 0
+                  };
+              }
+              return r;
           });
+          onUpdateAttendance(newRecords);
       }
   };
 
@@ -79,12 +86,17 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       });
     }
 
-    const basicSalary = workDays * emp.dailyRate;
-    const overtimeSalary = overtimeHours * emp.overtimeRate;
+    const dailyRate = record?.dailyRate ?? emp.dailyRate;
+    const overtimeRate = record?.overtimeRate ?? emp.overtimeRate;
+
+    const basicSalary = workDays * dailyRate;
+    const overtimeSalary = overtimeHours * overtimeRate;
     const totalSalary = basicSalary + overtimeSalary;
 
     return {
       emp,
+      dailyRate,
+      overtimeRate,
       workDays,
       overtimeHours,
       basicSalary,
@@ -193,11 +205,11 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                                     <input 
                                         type="number" 
                                         className="w-24 px-2 py-1 text-right border border-brand-300 dark:border-gray-600 dark:bg-gray-700 rounded focus:ring-2 focus:ring-brand-500 outline-none"
-                                        value={row.emp.dailyRate}
-                                        onChange={(e) => updateRate(row.emp, 'dailyRate', e.target.value)}
+                                        value={row.dailyRate}
+                                        onChange={(e) => updateRate(row.emp.id, 'dailyRate', e.target.value)}
                                     />
                                 ) : (
-                                    row.emp.dailyRate.toLocaleString('id-ID')
+                                    row.dailyRate.toLocaleString('id-ID')
                                 )}
                             </td>
                             <td className="px-4 py-3 text-center dark:text-gray-300 print:px-1 print:py-1">{row.overtimeHours}</td>
@@ -206,11 +218,11 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                                     <input 
                                         type="number" 
                                         className="w-24 px-2 py-1 text-right border border-brand-300 dark:border-gray-600 dark:bg-gray-700 rounded focus:ring-2 focus:ring-brand-500 outline-none"
-                                        value={row.emp.overtimeRate}
-                                        onChange={(e) => updateRate(row.emp, 'overtimeRate', e.target.value)}
+                                        value={row.overtimeRate}
+                                        onChange={(e) => updateRate(row.emp.id, 'overtimeRate', e.target.value)}
                                     />
                                 ) : (
-                                    row.emp.overtimeRate > 0 ? row.emp.overtimeRate.toLocaleString('id-ID') : '-'
+                                    row.overtimeRate > 0 ? row.overtimeRate.toLocaleString('id-ID') : '-'
                                 )}
                             </td>
                             <td className="px-4 py-3 text-right font-medium dark:text-gray-200 print:px-1 print:py-1">
@@ -270,14 +282,14 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                                                 <tr className="border-b" style={{ borderColor: '#d1d5db' }}>
                                                     <td className="p-2 border-r" style={{ borderColor: '#d1d5db' }}>Gaji Pokok</td>
                                                     <td className="p-2 text-center border-r" style={{ borderColor: '#d1d5db' }}>{row.workDays} Hari</td>
-                                                    <td className="p-2 text-right border-r" style={{ borderColor: '#d1d5db' }}>{row.emp.dailyRate.toLocaleString('id-ID')}</td>
+                                                    <td className="p-2 text-right border-r" style={{ borderColor: '#d1d5db' }}>{row.dailyRate.toLocaleString('id-ID')}</td>
                                                     <td className="p-2 text-right font-medium">{row.basicSalary.toLocaleString('id-ID')}</td>
                                                 </tr>
                                                 {row.overtimeHours > 0 && (
                                                     <tr className="border-b" style={{ borderColor: '#d1d5db' }}>
                                                         <td className="p-2 border-r" style={{ borderColor: '#d1d5db' }}>Lembur (Overtime)</td>
                                                         <td className="p-2 text-center border-r" style={{ borderColor: '#d1d5db' }}>{row.overtimeHours} Jam</td>
-                                                        <td className="p-2 text-right border-r" style={{ borderColor: '#d1d5db' }}>{row.emp.overtimeRate.toLocaleString('id-ID')}</td>
+                                                        <td className="p-2 text-right border-r" style={{ borderColor: '#d1d5db' }}>{row.overtimeRate.toLocaleString('id-ID')}</td>
                                                         <td className="p-2 text-right font-medium">{row.overtimeSalary.toLocaleString('id-ID')}</td>
                                                     </tr>
                                                 )}
@@ -370,14 +382,14 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                             <tr className="border-b border-gray-300">
                                 <td className="p-2 border-r border-gray-300">Gaji Pokok</td>
                                 <td className="p-2 text-center border-r border-gray-300">{row.workDays} Hari</td>
-                                <td className="p-2 text-right border-r border-gray-300">{row.emp.dailyRate.toLocaleString('id-ID')}</td>
+                                <td className="p-2 text-right border-r border-gray-300">{row.dailyRate.toLocaleString('id-ID')}</td>
                                 <td className="p-2 text-right font-medium">{row.basicSalary.toLocaleString('id-ID')}</td>
                             </tr>
                             {row.overtimeHours > 0 && (
                                 <tr className="border-b border-gray-300">
                                     <td className="p-2 border-r border-gray-300">Lembur (Overtime)</td>
                                     <td className="p-2 text-center border-r border-gray-300">{row.overtimeHours} Jam</td>
-                                    <td className="p-2 text-right border-r border-gray-300">{row.emp.overtimeRate.toLocaleString('id-ID')}</td>
+                                    <td className="p-2 text-right border-r border-gray-300">{row.overtimeRate.toLocaleString('id-ID')}</td>
                                     <td className="p-2 text-right font-medium">{row.overtimeSalary.toLocaleString('id-ID')}</td>
                                 </tr>
                             )}

@@ -536,16 +536,21 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                   <th className="px-4 py-3 text-left rounded-l-lg">Nama</th>
                                   <th className="px-4 py-3 text-left">Jabatan</th>
                                   <th className="px-4 py-3 text-right">Gaji/Hari</th>
+                                  <th className="px-4 py-3 text-right">Lembur/Jam</th>
                                   <th className="px-4 py-3 text-center rounded-r-lg">Aksi</th>
                               </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                               {periodEmployees.length === 0 && (
                                   <tr>
-                                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500 italic">Belum ada karyawan di periode ini.</td>
+                                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">Belum ada karyawan di periode ini.</td>
                                   </tr>
                               )}
-                              {periodEmployees.map(emp => (
+                              {periodEmployees.map(emp => {
+                                  const record = records.find(r => r.employeeId === emp.id);
+                                  const dailyRate = record?.dailyRate ?? emp.dailyRate;
+                                  const overtimeRate = record?.overtimeRate ?? emp.overtimeRate;
+                                  return (
                                   <tr key={emp.id} className="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                       {editingEmpId === emp.id ? (
                                           <>
@@ -565,7 +570,22 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                                       onChange={e => setEditEmpData({...editEmpData, position: e.target.value})}
                                                   />
                                               </td>
-                                              <td className="px-4 py-3 text-right text-gray-400 text-xs">Edit di Menu Penggajian</td>
+                                              <td className="px-4 py-3">
+                                                  <input 
+                                                      type="number" 
+                                                      className="w-full border p-1.5 rounded dark:bg-gray-600 dark:border-gray-500 focus:ring-1 focus:ring-brand-500 text-right" 
+                                                      value={editEmpData.dailyRate || 0} 
+                                                      onChange={e => setEditEmpData({...editEmpData, dailyRate: parseInt(e.target.value) || 0})}
+                                                  />
+                                              </td>
+                                              <td className="px-4 py-3">
+                                                  <input 
+                                                      type="number" 
+                                                      className="w-full border p-1.5 rounded dark:bg-gray-600 dark:border-gray-500 focus:ring-1 focus:ring-brand-500 text-right" 
+                                                      value={editEmpData.overtimeRate || 0} 
+                                                      onChange={e => setEditEmpData({...editEmpData, overtimeRate: parseInt(e.target.value) || 0})}
+                                                  />
+                                              </td>
                                               <td className="px-4 py-3 text-center flex justify-center gap-2">
                                                   <button onClick={saveEditEmployee} className="text-green-600 hover:text-green-800 bg-green-50 p-1 rounded hover:bg-green-100"><Save className="w-4 h-4"/></button>
                                                   <button onClick={() => setEditingEmpId(null)} className="text-gray-500 hover:text-gray-700 bg-gray-50 p-1 rounded hover:bg-gray-100"><X className="w-4 h-4"/></button>
@@ -575,7 +595,8 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                           <>
                                               <td className="px-4 py-3 font-medium dark:text-white">{emp.name}</td>
                                               <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{emp.position}</td>
-                                              <td className="px-4 py-3 text-right">{emp.dailyRate.toLocaleString('id-ID')}</td>
+                                              <td className="px-4 py-3 text-right">{dailyRate.toLocaleString('id-ID')}</td>
+                                              <td className="px-4 py-3 text-right">{overtimeRate.toLocaleString('id-ID')}</td>
                                               <td className="px-4 py-3 text-center flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                                   <button onClick={() => startEditEmployee(emp)} className="text-blue-600 hover:text-blue-800 bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-lg hover:bg-blue-100" title="Edit Data"><Edit2 className="w-4 h-4"/></button>
                                                   <button 
@@ -590,7 +611,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                           </>
                                       )}
                                   </tr>
-                              ))}
+                              )})}
                           </tbody>
                       </table>
                   </div>

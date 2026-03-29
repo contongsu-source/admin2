@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, Calculator, ShoppingCart, FileText, Building2, Settings, X, ChevronRight, Wallet } from 'lucide-react';
+import { LayoutDashboard, Users, Calculator, ShoppingCart, FileText, Building2, Settings, X, ChevronRight, Wallet, ClipboardList } from 'lucide-react';
 import { CompanyProfile } from '../types';
 
 interface SidebarProps {
@@ -18,6 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, com
     { id: 'materials', label: 'Belanja Material', icon: ShoppingCart },
     { id: 'petty_cash', label: 'Kas Kecil', icon: Wallet },
     { id: 'invoice', label: 'Invoice', icon: FileText },
+    { id: 'combined_report', label: 'Laporan Lengkap', icon: ClipboardList },
     { id: 'settings', label: 'Pengaturan', icon: Settings },
   ];
 

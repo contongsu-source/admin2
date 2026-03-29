@@ -612,7 +612,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                         if (day.isPresent) workDays++;
                                         overtimeHours += day.overtimeHours || 0;
                                     });
-                                    totalTerpakai += (workDays * emp.dailyRate) + (overtimeHours * emp.overtimeRate);
+                                    const dailyRate = record.dailyRate ?? emp.dailyRate;
+                                    const overtimeRate = record.overtimeRate ?? emp.overtimeRate;
+                                    totalTerpakai += (workDays * dailyRate) + (overtimeHours * overtimeRate);
                                 }
                             });
                             

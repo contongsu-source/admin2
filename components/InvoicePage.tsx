@@ -5,9 +5,10 @@ import { terbilang } from '../utils';
 
 interface InvoicePageProps {
   state: AppState;
+  onChangeView: (view: string) => void;
 }
 
-export const InvoicePage: React.FC<InvoicePageProps> = ({ state }) => {
+export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
   const materials = state.materials[currentPeriod?.id || ''] || [];
@@ -25,7 +26,9 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state }) => {
         if (day.isPresent) workDays++;
         overtimeHours += day.overtimeHours;
       });
-      totalWages += (workDays * emp.dailyRate) + (overtimeHours * emp.overtimeRate);
+      const dailyRate = record.dailyRate ?? emp.dailyRate;
+      const overtimeRate = record.overtimeRate ?? emp.overtimeRate;
+      totalWages += (workDays * dailyRate) + (overtimeHours * overtimeRate);
     }
   });
 
@@ -45,13 +48,21 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state }) => {
           <h2 className="text-2xl font-bold text-gray-900">Invoice</h2>
           <p className="text-gray-500">Cetak tagihan proyek</p>
         </div>
-        <button 
-          onClick={handlePrint}
-          className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
-        >
-          <Printer className="w-4 h-4" />
-          Cetak Invoice
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => onChangeView('consolidated_report')}
+            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            Cetak Semua Laporan
+          </button>
+          <button 
+            onClick={handlePrint}
+            className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Cetak Invoice
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-8 md:p-12 shadow-sm border border-gray-200 max-w-4xl mx-auto print:shadow-none print:border-0 print:p-0 print:w-full">

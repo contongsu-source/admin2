@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppState, MaterialItem } from '../types';
-import { Plus, Trash2, Upload, Image as ImageIcon, X, Printer, Calendar, Archive } from 'lucide-react';
+import { Plus, Trash2, Upload, Image as ImageIcon, X, Printer, Calendar, Archive, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface MaterialPageProps {
@@ -22,6 +22,40 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
     unitPrice: 0,
     receiptImage: undefined
   });
+
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        Tanggal: '2026-03-20',
+        Barang: 'Semen Gresik 40kg',
+        Qty: 10,
+        Satuan: 'ZAK',
+        Harga: 55000
+      },
+      {
+        Tanggal: '2026-03-20',
+        Barang: 'Pasir Muntilan',
+        Qty: 2,
+        Satuan: 'RIT',
+        Harga: 1500000
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template Material');
+    
+    // Adjust column widths
+    ws['!cols'] = [
+      { wch: 12 }, // Tanggal
+      { wch: 30 }, // Barang
+      { wch: 8 },  // Qty
+      { wch: 10 }, // Satuan
+      { wch: 15 }  // Harga
+    ];
+
+    XLSX.writeFile(wb, 'Template_Import_Material.xlsx');
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -172,7 +206,16 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Belanja Material</h2>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Pencatatan pengeluaran material & bukti bon</p>
         </div>
-        <div className="grid grid-cols-3 md:flex w-full md:w-auto gap-2 md:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:flex w-full md:w-auto gap-2 md:gap-3">
+             <button 
+               onClick={handleDownloadTemplate}
+               className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 px-2 md:px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors text-center"
+               title="Download Template Excel"
+             >
+                <Download className="w-4 h-4" />
+                <span className="hidden md:inline">Template</span>
+                <span className="md:hidden">Template</span>
+             </button>
              <label className="bg-green-600 hover:bg-green-700 text-white px-2 md:px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors cursor-pointer text-center">
                 <Upload className="w-4 h-4" />
                 <span className="hidden md:inline">Import Excel</span>
