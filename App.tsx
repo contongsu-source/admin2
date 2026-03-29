@@ -760,7 +760,7 @@ const App: React.FC = () => {
         </Layout>
 
         {/* Cloud Sync Status Toast */}
-        <div className={`fixed bottom-4 right-4 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg rounded-full px-4 py-2 flex items-center gap-2 transition-all duration-300 z-50 ${syncStatus === 'idle' ? 'opacity-0 translate-y-10' : 'opacity-100 translate-y-0'}`}>
+        <div className={`fixed bottom-4 right-4 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg rounded-full px-4 py-2 flex items-center gap-2 transition-all duration-300 z-50 no-print ${syncStatus === 'idle' ? 'opacity-0 translate-y-10' : 'opacity-100 translate-y-0'}`}>
             {syncStatus === 'syncing' && (
                 <>
                     <Cloud className="w-4 h-4 text-blue-500 animate-pulse" />
