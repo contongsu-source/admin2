@@ -8,9 +8,10 @@ interface PayrollPageProps {
   state: AppState;
   onUpdateEmployee?: (emp: Employee) => void;
   onUpdateAttendance?: (records: AttendanceRecord[]) => void;
+  hideSlips?: boolean;
 }
 
-export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmployee, onUpdateAttendance }) => {
+export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmployee, onUpdateAttendance, hideSlips = false }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
   const records = state.attendance[currentPeriod?.id || ''] || [];
@@ -134,13 +135,15 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                     <FileText className="w-4 h-4" />
                     Cetak Rekap
                 </button>
-                <button 
-                    onClick={handlePrintSlips}
-                    className="bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors h-10"
-                >
-                    <Printer className="w-4 h-4" />
-                    Cetak Semua Slip
-                </button>
+                {!hideSlips && (
+                    <button 
+                        onClick={handlePrintSlips}
+                        className="bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors h-10"
+                    >
+                        <Printer className="w-4 h-4" />
+                        Cetak Semua Slip
+                    </button>
+                )}
             </div>
         </div>
       </div>

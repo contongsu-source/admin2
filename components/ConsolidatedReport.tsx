@@ -27,7 +27,7 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state })
       </div>
       <div className="print:space-y-12">
         <div className="print:break-after-page"><AttendancePage state={state} onUpdate={() => {}} onAddEmployee={() => {}} onUpdateEmployee={() => {}} onDeleteEmployee={() => {}} onRemoveFromPeriod={() => {}} onAddToPeriod={() => {}} /></div>
-        <div className="print:break-after-page"><PayrollPage state={state} onUpdateEmployee={() => {}} onUpdateAttendance={() => {}} /></div>
+        <div className="print:break-after-page"><PayrollPage state={state} hideSlips={true} onUpdateEmployee={() => {}} onUpdateAttendance={() => {}} /></div>
         <div className="print:break-after-page"><MaterialPage state={state} onUpdate={() => {}} /></div>
         <div className="print:break-after-page"><InvoicePage state={state} /></div>
       </div>
