@@ -345,7 +345,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       </div>
 
       {/* PRINT SLIPS LAYOUT - Visible only when printing AND mode is 'slips' */}
-      <div className={`hidden ${printMode === 'slips' ? 'print-only' : ''}`}>
+      <div className={`hidden ${printMode === 'slips' ? 'print-only' : ''} ${hideSlips ? 'no-print' : ''}`}>
         {payrollData.map((row) => (
             <div key={row.emp.id} className="page-break w-full max-w-2xl mx-auto pt-8">
                  <div className="border-2 border-gray-800 p-8 bg-white">
