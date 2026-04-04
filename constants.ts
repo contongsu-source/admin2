@@ -129,5 +129,6 @@ export const INITIAL_STATE: AppState = {
   materials: INITIAL_MATERIALS,
   pettyCash: INITIAL_PETTY_CASH,
   incomingFunds: { 'p1': [], 'p2': [] },
+  rab: { 'p1': [], 'p2': [] },
   currentProjectId: 'p1',
 };

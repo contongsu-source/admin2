@@ -23,6 +23,7 @@ export interface DailyAttendance {
   date: string; // ISO date string
   isPresent: boolean; // 1 or 0
   overtimeHours: number;
+  extraWorkDays?: number; // NEW: Extra work days for late clock-outs
   checkInTime?: string; // HH:mm format
   checkOutTime?: string; // HH:mm format
 }
@@ -77,6 +78,7 @@ export interface CompanyProfile {
   address: string;
   director: string;
   city: string;
+  signature?: string; // Base64 string untuk tanda tangan
 }
 
 export interface IncomingFund {
@@ -84,6 +86,16 @@ export interface IncomingFund {
   date: string;
   source: string; // dari siapa
   amount: number;
+}
+
+export interface RABItem {
+  id: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+  category?: string;
 }
 
 export interface AppState {
@@ -95,6 +107,7 @@ export interface AppState {
   materials: Record<string, MaterialItem[]>; // Keyed by Period ID
   pettyCash: Record<string, PettyCashTransaction[]>; // Keyed by Project ID
   incomingFunds: Record<string, IncomingFund[]>; // Keyed by Project ID
+  rab: Record<string, RABItem[]>; // Keyed by Project ID
   currentProjectId: string;
 }
 

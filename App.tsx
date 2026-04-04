@@ -7,8 +7,9 @@ import { MaterialPage } from './components/MaterialPage';
 import { InvoicePage } from './components/InvoicePage';
 import { SettingsPage } from './components/SettingsPage';
 import { PettyCashPage } from './components/PettyCashPage';
+import { RABPage } from './components/RABPage';
 import { ConsolidatedReport } from './components/ConsolidatedReport';
-import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, prepareStateForSync } from './types';
+import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, RABItem, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
 import { Cloud, CheckCircle2, AlertCircle, LogIn } from 'lucide-react';
 import { auth, db, loginWithGoogle, logout } from './firebase';
@@ -124,6 +125,7 @@ const App: React.FC = () => {
         if (!parsed.attendance) parsed.attendance = {};
         if (!parsed.materials) parsed.materials = {};
         if (!parsed.pettyCash) parsed.pettyCash = {};
+        if (!parsed.rab) parsed.rab = {};
         return parsed;
       }
     } catch (e) {
@@ -352,6 +354,16 @@ const App: React.FC = () => {
           pettyCash: {
               ...prev.pettyCash,
               [state.currentProjectId]: transactions
+          }
+      }));
+  };
+
+  const handleUpdateRAB = (rabItems: RABItem[]) => {
+      setState(prev => ({
+          ...prev,
+          rab: {
+              ...prev.rab,
+              [state.currentProjectId]: rabItems
           }
       }));
   };
@@ -656,6 +668,7 @@ const App: React.FC = () => {
         attendance: { ...prev.attendance, [newPeriodId]: newAttendance },
         materials: { ...prev.materials, [newProjectId]: [] },
         pettyCash: { ...prev.pettyCash, [newProjectId]: [] },
+        rab: { ...prev.rab, [newProjectId]: [] },
         currentProjectId: newProjectId 
     }));
   };
@@ -691,6 +704,8 @@ const App: React.FC = () => {
         return <MaterialPage state={state} onUpdate={handleUpdateMaterials} />;
       case 'petty_cash':
         return <PettyCashPage state={state} onUpdate={handleUpdatePettyCash} />;
+      case 'rab':
+        return <RABPage state={state} onUpdate={handleUpdateRAB} />;
       case 'invoice':
         return <InvoicePage state={state} onChangeView={setCurrentView} />;
       case 'consolidated_report':
