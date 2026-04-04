@@ -26,6 +26,7 @@ export const ProjectReportPrint: React.FC<ProjectReportPrintProps> = ({ state, p
                 let overtimeHours = 0;
                 Object.values(record.days).forEach((day: any) => {
                     if (day.isPresent) workDays++;
+                    if (day.extraWorkDays) workDays += day.extraWorkDays;
                     overtimeHours += day.overtimeHours || 0;
                 });
                 const dailyRate = record.dailyRate ?? emp.dailyRate;

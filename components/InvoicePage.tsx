@@ -24,6 +24,7 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
       let overtimeHours = 0;
       Object.values(record.days).forEach((day: DailyAttendance) => {
         if (day.isPresent) workDays++;
+        if (day.extraWorkDays) workDays += day.extraWorkDays;
         overtimeHours += day.overtimeHours;
       });
       const dailyRate = record.dailyRate ?? emp.dailyRate;
@@ -149,9 +150,14 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
 
         <div className="flex justify-end mt-20">
             <div className="text-center">
-                <p className="mb-20">{companyProfile.city}, {currentDate}</p>
+                <p className="mb-2">{companyProfile.city}, {currentDate}</p>
+                <p className="mb-2">Direktur,</p>
+                {companyProfile.signature ? (
+                    <img src={companyProfile.signature} alt="Tanda Tangan" className="h-32 mx-auto mb-2" />
+                ) : (
+                    <div className="h-32" />
+                )}
                 <p className="font-bold border-b border-gray-800 inline-block px-8 pb-1">{companyProfile.director}</p>
-                <p className="text-sm mt-1">Direktur</p>
             </div>
         </div>
       </div>

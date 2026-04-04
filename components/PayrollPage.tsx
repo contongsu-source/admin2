@@ -83,6 +83,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
     if (record) {
       Object.values(record.days).forEach((day: DailyAttendance) => {
         if (day.isPresent) workDays++;
+        if (day.extraWorkDays) workDays += day.extraWorkDays;
         overtimeHours += day.overtimeHours;
       });
     }
@@ -338,7 +339,12 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       {/* RECAP FOOTER SIGNATURE (Visible only when printMode is 'recap') */}
       <div className={`hidden ${printMode === 'recap' ? 'print-only' : ''} mt-8 flex justify-end`}>
          <div className="text-center w-48">
-            <p className="mb-16">Mengetahui,</p>
+            <p className="mb-2">Mengetahui,</p>
+            {state.companyProfile.signature ? (
+                <img src={state.companyProfile.signature} alt="Tanda Tangan" className="h-32 mx-auto mb-2" />
+            ) : (
+                <div className="h-32" />
+            )}
             <p className="font-bold underline">{state.companyProfile.director}</p>
             <p>Direktur</p>
          </div>

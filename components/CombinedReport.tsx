@@ -29,6 +29,7 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
       let overtimeHours = 0;
       Object.values(record.days).forEach((day: DailyAttendance) => {
         if (day.isPresent) workDays++;
+        if (day.extraWorkDays) workDays += day.extraWorkDays;
         overtimeHours += day.overtimeHours;
       });
       const dailyRate = record.dailyRate ?? emp.dailyRate;
@@ -77,6 +78,7 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
                   let overtimeHours = 0;
                   Object.values(record.days).forEach((day: DailyAttendance) => {
                     if (day.isPresent) workDays++;
+                    if (day.extraWorkDays) workDays += day.extraWorkDays;
                     overtimeHours += day.overtimeHours;
                   });
                   return (
@@ -108,6 +110,7 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
                   let overtimeHours = 0;
                   Object.values(record.days).forEach((day: DailyAttendance) => {
                     if (day.isPresent) workDays++;
+                    if (day.extraWorkDays) workDays += day.extraWorkDays;
                     overtimeHours += day.overtimeHours;
                   });
                   const dailyRate = record.dailyRate ?? emp.dailyRate;

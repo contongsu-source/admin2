@@ -16,6 +16,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, com
     { id: 'attendance', label: 'Absensi Kerja', icon: Users },
     { id: 'payroll', label: 'Penggajian', icon: Calculator },
     { id: 'materials', label: 'Belanja Material', icon: ShoppingCart },
+    { id: 'rab', label: 'RAB / Anggaran', icon: FileText },
     { id: 'petty_cash', label: 'Kas Kecil', icon: Wallet },
     { id: 'invoice', label: 'Invoice', icon: FileText },
     { id: 'settings', label: 'Pengaturan', icon: Settings },

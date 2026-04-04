@@ -492,9 +492,13 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
       </div>
       
       <div className="hidden print-only mt-12 flex justify-end">
-         <div className="text-center">
-            <p>Mengetahui,</p>
-            <br/><br/><br/>
+         <div className="text-center w-48">
+            <p className="mb-2">Mengetahui,</p>
+            {state.companyProfile.signature ? (
+                <img src={state.companyProfile.signature} alt="Tanda Tangan" className="h-32 mx-auto mb-2" />
+            ) : (
+                <div className="h-32" />
+            )}
             <p className="font-bold underline">{state.companyProfile.director}</p>
          </div>
       </div>

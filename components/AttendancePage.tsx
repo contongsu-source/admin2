@@ -123,6 +123,29 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
     setLocalRecords(newRecords);
   };
 
+  const updateExtraWorkDays = (empId: string, dateStr: string, days: number) => {
+    let employeeRecord = localRecords.find(r => r.employeeId === empId);
+    let newRecords = [...localRecords];
+    
+    if (!employeeRecord) {
+        employeeRecord = { employeeId: empId, days: {} };
+        newRecords.push(employeeRecord);
+    }
+
+    newRecords = newRecords.map(rec => {
+        if (rec.employeeId !== empId) return rec;
+        const currentDay = rec.days[dateStr] || { date: dateStr, isPresent: false, overtimeHours: 0 };
+        return {
+            ...rec,
+            days: {
+                ...rec.days,
+                [dateStr]: { ...currentDay, extraWorkDays: days }
+            }
+        };
+    });
+    setLocalRecords(newRecords);
+  };
+
   const lastScanTimeRef = useRef<Record<string, number>>({});
   const processScanRef = useRef<((empId: string) => boolean) | null>(null);
 
@@ -178,9 +201,21 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
     const currentMinutes = hours * 60 + minutes;
     const currentTimeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 
-    const isCheckInTime = currentMinutes >= 7 * 60 + 30 && currentMinutes <= 8 * 60; // 07:30 - 08:00
-    const isCheckOutTime = currentMinutes >= 15 * 60 + 30 && currentMinutes <= 16 * 60; // 15:30 - 16:00
-    const isOvertimeTime = currentMinutes >= 16 * 60 + 15; // >= 16:15
+    // If clocking out between 00:00 and 06:59, it belongs to the previous day's shift
+    let targetDate = new Date(now);
+    if (hours >= 0 && hours < 7) {
+        targetDate.setDate(targetDate.getDate() - 1);
+    }
+    const targetDateStr = targetDate.toISOString().split('T')[0];
+
+    let shiftMinutes = currentMinutes;
+    if (hours >= 0 && hours < 7) {
+        shiftMinutes += 24 * 60; // Add 24 hours so it's continuous
+    }
+
+    const isCheckInTime = shiftMinutes >= 7 * 60 + 30 && shiftMinutes <= 8 * 60; // 07:30 - 08:00
+    const isCheckOutTime = shiftMinutes >= 15 * 60 + 30 && shiftMinutes <= 16 * 60; // 15:30 - 16:00
+    const isOvertimeTime = shiftMinutes >= 16 * 60 + 15; // >= 16:15
 
     if (!isCheckInTime && !isCheckOutTime && !isOvertimeTime) {
         setLastScanned({ name: emp.name, time: `Gagal: Belum waktunya absen (${currentTimeStr})` });
@@ -189,8 +224,17 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
     }
 
     let overtimeHours = 0;
+    let extraWorkDays = 0;
     if (isOvertimeTime) {
-        overtimeHours = Math.floor((currentMinutes - (16 * 60 + 15)) / 60) + 1;
+        if (hours >= 1 && hours < 7) {
+            extraWorkDays = 3;
+        } else if (hours === 0) {
+            extraWorkDays = 2;
+        } else if (hours >= 21 && hours <= 23) {
+            extraWorkDays = 1;
+        } else {
+            overtimeHours = Math.floor((shiftMinutes - (16 * 60 + 15)) / 60) + 1;
+        }
     }
 
     setLocalRecords(prev => {
@@ -201,7 +245,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
             newRecords.push(employeeRecord);
         }
 
-        const currentDay = employeeRecord.days[todayStr] || { date: todayStr, isPresent: false, overtimeHours: 0 };
+        const currentDay = employeeRecord.days[targetDateStr] || { date: targetDateStr, isPresent: false, overtimeHours: 0 };
         let updatedDay = { ...currentDay };
         let successMsg = '';
 
@@ -226,7 +270,16 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                 updatedDay.isPresent = true; 
                 updatedDay.checkOutTime = currentTimeStr;
                 updatedDay.overtimeHours = overtimeHours;
-                successMsg = `Berhasil Absen Pulang! ${overtimeHours > 0 ? `(Lembur: ${overtimeHours} jam)` : ''}`;
+                updatedDay.extraWorkDays = extraWorkDays;
+                
+                let lemburMsg = '';
+                if (extraWorkDays > 0) {
+                    lemburMsg = `(Dihitung +${extraWorkDays} Hari Kerja)`;
+                } else if (overtimeHours > 0) {
+                    lemburMsg = `(Lembur: ${overtimeHours} jam)`;
+                }
+                
+                successMsg = `Berhasil Absen Pulang! ${lemburMsg}`;
                 isSuccess = true;
             }
         }
@@ -237,7 +290,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                 ...rec,
                 days: {
                     ...rec.days,
-                    [todayStr]: updatedDay
+                    [targetDateStr]: updatedDay
                 }
             };
         });
@@ -788,8 +841,10 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                             const dayData = record.days[dateStr];
                             const isPresent = dayData?.isPresent || false;
                             const overtime = dayData?.overtimeHours || 0;
+                            const extraWorkDays = dayData?.extraWorkDays || 0;
                             
                             if(isPresent) totalPresence++;
+                            if(extraWorkDays) totalPresence += extraWorkDays;
                             totalOvertime += overtime;
 
                             return (
@@ -808,25 +863,46 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
                                         {/* Overtime Input/Display */}
                                         {isEditing ? (
-                                            <div className="flex items-center gap-0.5">
-                                                <input 
-                                                    type="number"
-                                                    min="0"
-                                                    max="24"
-                                                    value={overtime === 0 ? '' : overtime}
-                                                    onChange={(e) => updateOvertime(emp.id, dateStr, parseInt(e.target.value) || 0)}
-                                                    placeholder="0"
-                                                    className="w-9 text-center text-[10px] border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-1 focus:ring-brand-500 outline-none p-0.5"
-                                                    title="Jam Lembur"
-                                                />
+                                            <div className="flex flex-col items-center gap-1">
+                                                <div className="flex items-center gap-0.5">
+                                                    <input 
+                                                        type="number"
+                                                        min="0"
+                                                        max="24"
+                                                        value={overtime === 0 ? '' : overtime}
+                                                        onChange={(e) => updateOvertime(emp.id, dateStr, parseInt(e.target.value) || 0)}
+                                                        placeholder="0"
+                                                        className="w-9 text-center text-[10px] border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-1 focus:ring-brand-500 outline-none p-0.5"
+                                                        title="Jam Lembur"
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-0.5">
+                                                    <input 
+                                                        type="number"
+                                                        min="0"
+                                                        max="10"
+                                                        value={extraWorkDays === 0 ? '' : extraWorkDays}
+                                                        onChange={(e) => updateExtraWorkDays(emp.id, dateStr, parseInt(e.target.value) || 0)}
+                                                        placeholder="0"
+                                                        className="w-9 text-center text-[10px] border border-blue-200 dark:border-blue-600 dark:bg-gray-700 dark:text-white rounded focus:ring-1 focus:ring-brand-500 outline-none p-0.5"
+                                                        title="Tambahan Hari Kerja"
+                                                    />
+                                                </div>
                                             </div>
                                         ) : (
-                                            overtime > 0 && (
-                                                <span className="text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-0.5 shadow-sm" title="Jam Lembur">
-                                                    <Clock className="w-3 h-3" />
-                                                    {overtime}
-                                                </span>
-                                            )
+                                            <div className="flex flex-col items-center gap-1">
+                                                {overtime > 0 && (
+                                                    <span className="text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-0.5 shadow-sm" title="Jam Lembur">
+                                                        <Clock className="w-3 h-3" />
+                                                        {overtime}
+                                                    </span>
+                                                )}
+                                                {extraWorkDays > 0 && (
+                                                    <span className="text-[9px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded-md font-bold shadow-sm" title="Tambahan Hari Kerja">
+                                                        +{extraWorkDays} Hari
+                                                    </span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 </td>
@@ -906,8 +982,10 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                     const dayData = record.days[dateStr];
                                     const isPresent = dayData?.isPresent || false;
                                     const overtime = dayData?.overtimeHours || 0;
+                                    const extraWorkDays = dayData?.extraWorkDays || 0;
                                     
                                     if(isPresent) totalPresence++;
+                                    if(extraWorkDays) totalPresence += extraWorkDays;
                                     totalOvertime += overtime;
 
                                     return (
@@ -915,6 +993,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                             <div className="flex flex-col items-center">
                                                 <span>{isPresent ? '✓' : '-'}</span>
                                                 {overtime > 0 && <span className="text-[8px] font-bold">({overtime})</span>}
+                                                {extraWorkDays > 0 && <span className="text-[8px] font-bold text-blue-600">(+{extraWorkDays}h)</span>}
                                             </div>
                                         </td>
                                     );
@@ -929,7 +1008,12 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
              <div className="mt-8 flex justify-end">
                 <div className="text-center w-48">
-                    <p className="mb-16">Mengetahui,</p>
+                    <p className="mb-2">Mengetahui,</p>
+                    {state.companyProfile.signature ? (
+                        <img src={state.companyProfile.signature} alt="Tanda Tangan" className="h-32 mx-auto mb-2" />
+                    ) : (
+                        <div className="h-32" />
+                    )}
                     <p className="font-bold underline">{state.companyProfile.director}</p>
                     <p>Direktur</p>
                 </div>

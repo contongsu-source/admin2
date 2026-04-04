@@ -353,6 +353,42 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     required
                 />
             </div>
+            <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tanda Tangan</label>
+                <div className="flex items-center gap-4">
+                    {profile.signature && (
+                        <img src={profile.signature} alt="Tanda Tangan" className="h-16 border rounded p-1" />
+                    )}
+                    <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        {profile.signature ? 'Ganti Tanda Tangan' : 'Upload Tanda Tangan'}
+                        <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                        setProfile({...profile, signature: reader.result as string});
+                                    };
+                                    reader.readAsDataURL(file);
+                                }
+                            }}
+                            className="hidden"
+                        />
+                    </label>
+                    {profile.signature && (
+                        <button 
+                            type="button" 
+                            onClick={() => setProfile({...profile, signature: undefined})}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                        >
+                            Hapus
+                        </button>
+                    )}
+                </div>
+            </div>
             <div className="col-span-2 flex justify-end">
                 <button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
                     Simpan Profil
@@ -610,6 +646,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                     let overtimeHours = 0;
                                     Object.values(record.days).forEach((day: any) => {
                                         if (day.isPresent) workDays++;
+                                        if (day.extraWorkDays) workDays += day.extraWorkDays;
                                         overtimeHours += day.overtimeHours || 0;
                                     });
                                     const dailyRate = record.dailyRate ?? emp.dailyRate;

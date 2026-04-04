@@ -33,6 +33,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
       
       Object.values(record.days).forEach((day: DailyAttendance) => {
         if (day.isPresent) workDays++;
+        if (day.extraWorkDays) workDays += day.extraWorkDays;
         overtimeHours += day.overtimeHours;
       });
       
@@ -65,6 +66,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
               let overtimeHours = 0;
               Object.values(record.days).forEach((day: any) => {
                   if (day.isPresent) workDays++;
+                  if (day.extraWorkDays) workDays += day.extraWorkDays;
                   overtimeHours += day.overtimeHours || 0;
               });
               
