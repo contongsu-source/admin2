@@ -46,6 +46,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       }, 100);
   };
   
+  // Funds Print Ref
+  const fundsPrintRef = useRef<HTMLDivElement>(null);
+  const handlePrintFunds = useReactToPrint({
+      contentRef: fundsPrintRef,
+      documentTitle: `Rekap-Dana-Masuk`,
+  });
+
   // New Project State
   const [newProject, setNewProject] = useState({
     name: '',
@@ -740,6 +747,71 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </div>
       </div>
 
+      {/* Hidden Print Funds Component */}
+      <div className="hidden">
+          <div ref={fundsPrintRef} className="p-8 text-black bg-white">
+              {managingFundsFor && (() => {
+                  const project = state.projects.find(p => p.id === managingFundsFor);
+                  const funds = state.incomingFunds[managingFundsFor] || [];
+                  
+                  // Group by source
+                  const fundsBySource: Record<string, number> = {};
+                  funds.forEach(f => {
+                      if (!fundsBySource[f.source]) {
+                          fundsBySource[f.source] = 0;
+                      }
+                      fundsBySource[f.source] += f.amount;
+                  });
+
+                  return (
+                      <div>
+                          <div className="text-center mb-6">
+                              <h1 className="text-2xl font-bold uppercase">{state.companyProfile.name}</h1>
+                              <p className="text-sm text-gray-600">{state.companyProfile.address}</p>
+                              <div className="border-b-2 border-black my-4"></div>
+                              <h2 className="text-xl font-bold uppercase mt-4">Rekapitulasi Dana Masuk</h2>
+                              <p className="font-bold text-lg mt-1">Proyek: {project?.name}</p>
+                          </div>
+                          
+                          <table className="w-full text-sm text-left border-collapse mt-6">
+                              <thead>
+                                  <tr className="border-b-2 border-black">
+                                      <th className="py-2 px-4 font-bold text-gray-900 w-16">No</th>
+                                      <th className="py-2 px-4 font-bold text-gray-900">Nama Pemberi Dana</th>
+                                      <th className="py-2 px-4 font-bold text-gray-900 text-right">Total Dana Masuk (Rp)</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  {Object.entries(fundsBySource).map(([source, amount], idx) => (
+                                      <tr key={source} className="border-b border-gray-300">
+                                          <td className="py-2 px-4 text-gray-900">{idx + 1}</td>
+                                          <td className="py-2 px-4 text-gray-900 font-medium">{source}</td>
+                                          <td className="py-2 px-4 text-gray-900 text-right font-semibold">
+                                              {amount.toLocaleString('id-ID')}
+                                          </td>
+                                      </tr>
+                                  ))}
+                                  {Object.keys(fundsBySource).length === 0 && (
+                                      <tr>
+                                          <td colSpan={3} className="py-4 text-center text-gray-500">Belum ada dana masuk</td>
+                                      </tr>
+                                  )}
+                              </tbody>
+                              <tfoot>
+                                  <tr className="border-t-2 border-black bg-gray-100 font-bold">
+                                      <td colSpan={2} className="py-2 px-4 text-right text-gray-900">TOTAL KESELURUHAN:</td>
+                                      <td className="py-2 px-4 text-right text-green-700">
+                                          {Object.values(fundsBySource).reduce((sum, amt) => sum + amt, 0).toLocaleString('id-ID')}
+                                      </td>
+                                  </tr>
+                              </tfoot>
+                          </table>
+                      </div>
+                  );
+              })()}
+          </div>
+      </div>
+
       {/* Incoming Funds Modal */}
       {managingFundsFor && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -751,12 +823,21 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                               {state.projects.find(p => p.id === managingFundsFor)?.name}
                           </span>
                       </h3>
-                      <button 
-                          onClick={() => setManagingFundsFor(null)}
-                          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      >
-                          <X className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                          <button 
+                              onClick={handlePrintFunds}
+                              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                          >
+                              <Printer className="w-4 h-4" />
+                              Cetak PDF Rekap
+                          </button>
+                          <button 
+                              onClick={() => setManagingFundsFor(null)}
+                              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          >
+                              <X className="w-5 h-5" />
+                          </button>
+                      </div>
                   </div>
                   
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
