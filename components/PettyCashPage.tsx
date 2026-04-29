@@ -11,8 +11,14 @@ interface PettyCashPageProps {
 export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate }) => {
   const transactions = state.pettyCash ? (state.pettyCash[state.currentProjectId] || []) : [];
   
-  // Sort by Date Descending
-  const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Sort by Date Ascending to calculate running balance, then reverse for display
+  let runningBalance = 0;
+  const ascendingTx = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const txWithBalance = ascendingTx.map(t => {
+      runningBalance += t.type === 'in' ? t.amount : -t.amount;
+      return { ...t, balance: runningBalance };
+  });
+  const sortedTransactions = txWithBalance.reverse();
 
   const [showForm, setShowForm] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -416,13 +422,14 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
       
       {/* Mobile Card List */}
       <div className="md:hidden space-y-3">
-          {sortedTransactions.map(t => (
+          {sortedTransactions.map((t: any) => (
               <div key={t.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center">
                   <div>
                       <div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
                         <span>{t.date}</span>
                       </div>
                       <p className="font-bold text-gray-900 dark:text-white text-sm">{t.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">Saldo: {t.balance >= 0 ? '+' : '-'} Rp {Math.abs(t.balance).toLocaleString('id-ID')}</p>
                   </div>
                   <div className={`text-right ${t.type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
                       <p className="font-bold text-sm">
@@ -449,11 +456,12 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                       <th className="px-6 py-4">Uraian</th>
                       <th className="px-6 py-4 text-right text-green-600">Masuk (Debit)</th>
                       <th className="px-6 py-4 text-right text-red-600">Keluar (Kredit)</th>
+                      <th className="px-6 py-4 text-right text-blue-600">Saldo</th>
                       <th className="px-6 py-4 text-center no-print">Aksi</th>
                   </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {sortedTransactions.map(t => (
+                  {sortedTransactions.map((t: any) => (
                       <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{t.date}</td>
                           <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{t.description}</td>
@@ -463,6 +471,9 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                           <td className="px-6 py-4 text-right font-medium text-red-600 dark:text-red-400">
                               {t.type === 'out' ? `Rp ${t.amount.toLocaleString('id-ID')}` : '-'}
                           </td>
+                          <td className={`px-6 py-4 text-right font-bold ${t.balance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                              Rp {t.balance.toLocaleString('id-ID')}
+                          </td>
                           <td className="px-6 py-4 text-center no-print">
                               <button onClick={() => handleDelete(t.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg">
                                   <Trash2 className="w-4 h-4" />
@@ -471,7 +482,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                       </tr>
                   ))}
                   {sortedTransactions.length === 0 && (
-                      <tr><td colSpan={5} className="text-center py-8 text-gray-400">Belum ada transaksi</td></tr>
+                      <tr><td colSpan={6} className="text-center py-8 text-gray-400">Belum ada transaksi</td></tr>
                   )}
               </tbody>
           </table>
