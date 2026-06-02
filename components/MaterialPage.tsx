@@ -11,7 +11,9 @@ interface MaterialPageProps {
 export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriodId = currentProject?.currentPeriodId || '';
-  const materials = (state.materials[currentPeriodId] || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const materials: MaterialItem[] = Array.from(
+    new Map<string, MaterialItem>((state.materials[currentPeriodId] || []).map((m: MaterialItem) => [m.id, m])).values()
+  ).sort((a: MaterialItem, b: MaterialItem) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const [showForm, setShowForm] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<Partial<MaterialItem>>({
@@ -22,6 +24,52 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
     unitPrice: 0,
     receiptImage: undefined
   });
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleScanNota = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    try {
+      const formData = new FormData();
+      formData.append('receipt', file);
+
+      const response = await fetch('/api/scan-receipt', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal scan nota');
+      }
+
+      const data = await response.json();
+      if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+        const newItems = data.items.map((item: any) => ({
+          id: Math.random().toString(36).substr(2, 9),
+          date: new Date().toISOString().split('T')[0],
+          itemName: item.itemName,
+          quantity: Number(item.quantity) || 1,
+          unit: item.unit || 'PCS',
+          unitPrice: Number(item.unitPrice) || 0,
+          totalPrice: Number(item.totalPrice) || (Number(item.quantity) * Number(item.unitPrice)),
+          receiptImage: undefined // You could attach the compressed image here if wanted, but left undefined for now
+        }));
+        
+        onUpdate([...materials, ...newItems]);
+        alert(`Berhasil scan ${newItems.length} item dari nota!`);
+      } else {
+        alert('Tidak ada barang yang terdeteksi dari nota ini.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Gagal membaca nota. Pastikan gambar jelas dan api key valid.');
+    } finally {
+      setIsScanning(false);
+      e.target.value = '';
+    }
+  };
 
   const handleDownloadTemplate = () => {
     const templateData = [
@@ -206,7 +254,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Belanja Material</h2>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Pencatatan pengeluaran material & bukti bon</p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:flex w-full md:w-auto gap-2 md:gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 md:flex w-full md:w-auto gap-2 md:gap-3">
              <button 
                onClick={handleDownloadTemplate}
                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 px-2 md:px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors text-center"
@@ -216,6 +264,12 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
                 <span className="hidden md:inline">Template</span>
                 <span className="md:hidden">Template</span>
              </button>
+             <label className="bg-indigo-600 hover:bg-indigo-700 text-white px-2 md:px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors cursor-pointer text-center">
+                <ImageIcon className="w-4 h-4" />
+                <span className="hidden md:inline">{isScanning ? 'Memproses...' : 'Scan Nota AI'}</span>
+                <span className="md:hidden">{isScanning ? '...' : 'Scan'}</span>
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanNota} disabled={isScanning} />
+            </label>
              <label className="bg-green-600 hover:bg-green-700 text-white px-2 md:px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors cursor-pointer text-center">
                 <Upload className="w-4 h-4" />
                 <span className="hidden md:inline">Import Excel</span>

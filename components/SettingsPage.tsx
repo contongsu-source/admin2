@@ -377,7 +377,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                 if (file) {
                                     const reader = new FileReader();
                                     reader.onloadend = () => {
-                                        setProfile({...profile, signature: reader.result as string});
+                                        const img = new Image();
+                                        img.onload = () => {
+                                            const canvas = document.createElement('canvas');
+                                            const MAX_WIDTH = 300;
+                                            const scaleSize = MAX_WIDTH / img.width;
+                                            canvas.width = MAX_WIDTH;
+                                            canvas.height = img.height * scaleSize;
+                                            const ctx = canvas.getContext('2d');
+                                            ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                                            setProfile({...profile, signature: dataUrl});
+                                        };
+                                        img.src = reader.result as string;
                                     };
                                     reader.readAsDataURL(file);
                                 }

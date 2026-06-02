@@ -421,7 +421,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
       {/* Transaction List */}
       
       {/* Mobile Card List */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-3 print:hidden">
           {sortedTransactions.map((t: any) => (
               <div key={t.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center">
                   <div>
@@ -429,7 +429,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                         <span>{t.date}</span>
                       </div>
                       <p className="font-bold text-gray-900 dark:text-white text-sm">{t.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">Saldo: {t.balance >= 0 ? '+' : '-'} Rp {Math.abs(t.balance).toLocaleString('id-ID')}</p>
+                      <p className="text-xs font-bold text-blue-600 mt-1">Saldo: {t.balance >= 0 ? '+' : '-'} Rp {Math.abs(t.balance).toLocaleString('id-ID')}</p>
                   </div>
                   <div className={`text-right ${t.type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
                       <p className="font-bold text-sm">
@@ -448,30 +448,30 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs font-bold">
-                  <tr>
-                      <th className="px-6 py-4">Tanggal</th>
-                      <th className="px-6 py-4">Uraian</th>
-                      <th className="px-6 py-4 text-right text-green-600">Masuk (Debit)</th>
-                      <th className="px-6 py-4 text-right text-red-600">Keluar (Kredit)</th>
-                      <th className="px-6 py-4 text-right text-blue-600">Saldo</th>
+      <div className="hidden md:block print:block bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden print:border-black print:shadow-none print:bg-transparent">
+          <table className="w-full text-sm text-left print:text-xs">
+              <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs font-bold print:bg-gray-200 print:text-black">
+                  <tr className="print:border-b-2 print:border-black">
+                      <th className="px-6 py-4 print:px-2 print:py-2">Tanggal</th>
+                      <th className="px-6 py-4 print:px-2 print:py-2">Uraian</th>
+                      <th className="px-6 py-4 text-right text-green-600 print:text-black print:px-2 print:py-2">Masuk (Debit)</th>
+                      <th className="px-6 py-4 text-right text-red-600 print:text-black print:px-2 print:py-2">Keluar (Kredit)</th>
+                      <th className="px-6 py-4 text-right text-blue-600 print:text-black print:px-2 print:py-2">Saldo</th>
                       <th className="px-6 py-4 text-center no-print">Aksi</th>
                   </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700 print:divide-black">
                   {sortedTransactions.map((t: any) => (
-                      <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                          <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{t.date}</td>
-                          <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{t.description}</td>
-                          <td className="px-6 py-4 text-right font-medium text-green-600 dark:text-green-400">
+                      <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 print:border-b print:border-black">
+                          <td className="px-6 py-4 text-gray-600 dark:text-gray-300 print:text-black print:px-2 print:py-2">{t.date}</td>
+                          <td className="px-6 py-4 font-medium text-gray-900 dark:text-white print:text-black print:px-2 print:py-2">{t.description}</td>
+                          <td className="px-6 py-4 text-right font-medium text-green-600 dark:text-green-400 print:text-black print:px-2 print:py-2">
                               {t.type === 'in' ? `Rp ${t.amount.toLocaleString('id-ID')}` : '-'}
                           </td>
-                          <td className="px-6 py-4 text-right font-medium text-red-600 dark:text-red-400">
+                          <td className="px-6 py-4 text-right font-medium text-red-600 dark:text-red-400 print:text-black print:px-2 print:py-2">
                               {t.type === 'out' ? `Rp ${t.amount.toLocaleString('id-ID')}` : '-'}
                           </td>
-                          <td className={`px-6 py-4 text-right font-bold ${t.balance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                          <td className={`px-6 py-4 text-right font-bold print:text-black print:px-2 print:py-2 ${t.balance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
                               Rp {t.balance.toLocaleString('id-ID')}
                           </td>
                           <td className="px-6 py-4 text-center no-print">
