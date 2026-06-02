@@ -1,5 +1,6 @@
 {
   "name": "SBM Management",
   "description": "Integrated management system for CV. SBM handling attendance, payroll, material expenses, and invoicing.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -34,15 +34,16 @@ service cloud.firestore {
 
     function isValidAppState() {
       let data = request.resource.data;
-      return data.keys().hasAll(['companyProfile', 'projects', 'periods', 'employees', 'attendance', 'materials', 'pettyCash', 'incomingFunds', 'currentProjectId']) &&
+      return data.keys().hasAll(['companyProfile', 'projects', 'periods', 'employees', 'attendance', 'materials', 'currentProjectId']) &&
              data.companyProfile is map &&
              data.projects is list &&
              data.periods is list &&
              data.employees is list &&
              data.attendance is map &&
              data.materials is map &&
-             data.pettyCash is map &&
-             data.incomingFunds is map &&
+             (!("pettyCash" in data) || data.pettyCash is map) &&
+             (!("incomingFunds" in data) || data.incomingFunds is map) &&
+             (!("rab" in data) || data.rab is map) &&
              data.currentProjectId is string;
     }
 

@@ -11,6 +11,7 @@ import { RABPage } from './components/RABPage';
 import { ConsolidatedReport } from './components/ConsolidatedReport';
 import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, RABItem, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
+import { deepEqual } from './utils';
 import { Cloud, CheckCircle2, AlertCircle, LogIn } from 'lucide-react';
 import { auth, db, loginWithGoogle, logout } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -138,8 +139,9 @@ const App: React.FC = () => {
   
   // --- Cloud Sync State ---
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'saved' | 'error'>('idle');
+  const [syncErrorMsg, setSyncErrorMsg] = useState<string | null>(null);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
-  const lastCloudStateRef = useRef<string>('');
+  const lastCloudStateRef = useRef<AppState | null>(null);
 
   // Save to LocalStorage always (as backup)
   useEffect(() => {
@@ -203,7 +205,11 @@ const App: React.FC = () => {
             // Merge into newMaterials
             Object.keys(groupedLegacy).forEach(periodId => {
                 const existing = newMaterials[periodId] || [];
-                newMaterials[periodId] = [...existing, ...groupedLegacy[periodId]];
+                // Prevent duplicate elements from merging into existing state
+                const existingIds = new Set(existing.map(item => item.id));
+                const uniqueNewItems = groupedLegacy[periodId].filter(item => !existingIds.has(item.id));
+                
+                newMaterials[periodId] = [...existing, ...uniqueNewItems];
             });
             
             delete newMaterials[state.currentProjectId]; 
@@ -226,6 +232,7 @@ const App: React.FC = () => {
               const data = docSnap.data() as AppState;
               if (data && data.companyProfile) {
                   if (!data.incomingFunds) data.incomingFunds = {};
+                  if (!data.rab) data.rab = {};
                   if (typeof data.currentProjectId !== 'string') data.currentProjectId = '';
                   if (!data.projects) data.projects = [];
                   if (!data.periods) data.periods = [];
@@ -234,9 +241,8 @@ const App: React.FC = () => {
                   if (!data.materials) data.materials = {};
                   if (!data.pettyCash) data.pettyCash = {};
                   
-                  const stringified = JSON.stringify(data);
-                  if (lastCloudStateRef.current !== stringified) {
-                      lastCloudStateRef.current = stringified;
+                  if (!deepEqual(lastCloudStateRef.current, data)) {
+                      lastCloudStateRef.current = data;
                       setState(data);
                   }
               }
@@ -244,6 +250,7 @@ const App: React.FC = () => {
           setIsLoadingCloud(false);
       }, (error) => {
           setSyncStatus('error');
+          setSyncErrorMsg(error instanceof Error ? error.message : String(error));
           setIsLoadingCloud(false);
           handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
       });
@@ -256,19 +263,21 @@ const App: React.FC = () => {
     if (!isAuthReady || !user || isLoadingCloud) return;
 
     const syncState = prepareStateForSync(state);
-    const stringified = JSON.stringify(syncState);
-    if (lastCloudStateRef.current === stringified) return;
+    const cleanSyncState = JSON.parse(JSON.stringify(syncState));
+    if (deepEqual(lastCloudStateRef.current, cleanSyncState)) return;
 
     setSyncStatus('syncing');
+    setSyncErrorMsg(null);
     
     // Debounce the save
     const timer = setTimeout(async () => {
         try {
-            lastCloudStateRef.current = stringified;
-            await setDoc(doc(db, 'users', user.uid), JSON.parse(stringified));
+            lastCloudStateRef.current = cleanSyncState;
+            await setDoc(doc(db, 'users', user.uid), cleanSyncState);
             setSyncStatus('saved');
         } catch (error) {
             setSyncStatus('error');
+            setSyncErrorMsg(error instanceof Error ? error.message : String(error));
             handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
         }
         
@@ -791,7 +800,13 @@ const App: React.FC = () => {
             {syncStatus === 'error' && (
                 <>
                     <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-xs font-medium text-red-700 dark:text-red-400">Gagal Sinkronisasi</span>
+                    <span 
+                        className="text-xs font-medium text-red-700 dark:text-red-400 cursor-help"
+                        title={syncErrorMsg || 'Terjadi kesalahan saat menyimpan ke cloud'}
+                        onClick={() => syncErrorMsg && alert('Detail Error Sinkronisasi:\n\n' + syncErrorMsg)}
+                    >
+                        Gagal Sinkronisasi
+                    </span>
                 </>
             )}
         </div>

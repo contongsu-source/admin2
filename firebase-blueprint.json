@@ -13,6 +13,7 @@
         "materials": { "type": "object" },
         "pettyCash": { "type": "object" },
         "incomingFunds": { "type": "object" },
+        "rab": { "type": "object" },
         "currentProjectId": { "type": "string" }
       }
     }
