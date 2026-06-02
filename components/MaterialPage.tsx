@@ -32,16 +32,38 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
 
     setIsScanning(true);
     try {
-      const formData = new FormData();
-      formData.append('receipt', file);
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<{base64: string, mimeType: string}>((resolve, reject) => {
+        reader.onload = (ev) => {
+          const result = ev.target?.result as string;
+          // result formatting: "data:image/jpeg;base64,...base64data..."
+          const split = result.split(',');
+          const mimeType = split[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+          const base64 = split[1];
+          resolve({ base64, mimeType });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { base64, mimeType } = await base64Promise;
 
       const response = await fetch('/api/scan-receipt', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ base64, mimeType }),
       });
 
       if (!response.ok) {
-        throw new Error('Gagal scan nota');
+        let errMsg = 'Gagal scan nota';
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch(e) {}
+        throw new Error(errMsg + ' (Status: ' + response.status + ')');
       }
 
       const data = await response.json();
@@ -62,9 +84,9 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate }) =
       } else {
         alert('Tidak ada barang yang terdeteksi dari nota ini.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Gagal membaca nota. Pastikan gambar jelas dan api key valid.');
+      alert('Error: ' + error.message + '\n\nPastikan format file benar dan API key valid. Jika di-deploy ke Vercel, pastikan backend berjalan atau pindahkan ke server yang mentoleransi Express backend.');
     } finally {
       setIsScanning(false);
       e.target.value = '';
