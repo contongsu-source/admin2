@@ -11,18 +11,19 @@ async function startServer() {
   const PORT = 3000;
 
   // Middleware to parse JSON
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
 
   // API to upload and parse receipt
-  app.post("/api/scan-receipt", upload.single('receipt'), async (req, res) => {
+  app.post("/api/scan-receipt", async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No receipt file provided." });
+      const { base64: base64Data, mimeType } = req.body;
+      if (!base64Data) {
+        return res.status(400).json({ error: "No receipt data provided." });
       }
 
       const apiKey = process.env.GEMINI_API_KEY || '';
       if (!apiKey) {
-        return res.status(500).json({ error: "Gemini API key not configured on server." });
+        return res.status(500).json({ error: "Gemini API key not configured on server (Missing GEMINI_API_KEY env)" });
       }
 
       const ai = new GoogleGenAI({
@@ -34,12 +35,9 @@ async function startServer() {
         }
       });
 
-      const base64Data = req.file.buffer.toString('base64');
-      const mimeType = req.file.mimetype;
-
       const imagePart = {
         inlineData: {
-          mimeType: mimeType,
+          mimeType: mimeType || 'image/jpeg',
           data: base64Data,
         },
       };
