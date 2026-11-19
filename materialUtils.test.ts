@@ -4,6 +4,7 @@ import {
   DEFAULT_MATERIAL_LOCATION,
   DEFAULT_LOCATION_KEY,
   extractUniqueMaterialLocations,
+  formatMaterialDate,
   getLocationGroupKey,
   groupMaterialsByLocation,
   normalizeMaterialLocation,
@@ -163,4 +164,22 @@ test('prepareStateForSync strips receiptImage and undefined fields for Firestore
   const item = synced.materials.p1[0];
   assert.equal('receiptImage' in item, false);
   assert.equal('location' in item, false);
+});
+
+test('formatMaterialDate formats ISO and DMY dates into DD/MM/YYYY', () => {
+  assert.equal(formatMaterialDate('2026-02-10'), '10/02/2026');
+  assert.equal(formatMaterialDate('2026-2-5'), '05/02/2026');
+  assert.equal(formatMaterialDate('5/2/2026'), '05/02/2026');
+  assert.equal(formatMaterialDate(''), '-');
+  assert.equal(formatMaterialDate(undefined), '-');
+});
+
+test('parseMaterialExcelRow normalizes DD/MM/YYYY Excel dates to ISO YYYY-MM-DD', () => {
+  const parsed = parseMaterialExcelRow({
+    Tanggal: '20/03/2026',
+    Barang: 'Paku',
+    Qty: 2,
+    Harga: 15000,
+  });
+  assert.equal(parsed?.date, '2026-03-20');
 });

@@ -21,6 +21,51 @@ export function getLocationGroupKey(location?: string): string {
   return normalized ? normalized.toLowerCase() : DEFAULT_LOCATION_KEY;
 }
 
+export function formatMaterialDate(dateStr?: string): string {
+  if (!dateStr) return '-';
+  const trimmed = String(dateStr).trim();
+  if (!trimmed) return '-';
+
+  // Match YYYY-MM-DD (or YYYY-MM-DDTHH:mm:ss...)
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+
+  // Match DD/MM/YYYY or D/M/YYYY (or DD-MM-YYYY)
+  const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch;
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  return trimmed;
+}
+
+export function normalizeMaterialDateInput(rawDate: unknown, fallbackDate?: string): string {
+  if (rawDate !== undefined && rawDate !== null) {
+    const trimmed = String(rawDate).trim();
+    if (trimmed) {
+      const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (dmyMatch) {
+        const [, day, month, year] = dmyMatch;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      return trimmed;
+    }
+  }
+  return fallbackDate || new Date().toISOString().split('T')[0];
+}
+
 export function groupMaterialsByLocation(materials: MaterialItem[]): MaterialLocationGroup[] {
   const map = new Map<string, MaterialLocationGroup>();
 
@@ -84,7 +129,7 @@ export function parseMaterialExcelRow(
   const rawUnit = row.Satuan ?? row.unit;
   const unit = rawUnit ? String(rawUnit).trim() : 'PCS';
   const rawDate = row.Tanggal ?? row.date;
-  const date = rawDate ? String(rawDate).trim() : (fallbackDate || new Date().toISOString().split('T')[0]);
+  const date = normalizeMaterialDateInput(rawDate, fallbackDate);
   const rawLocation = row['Tempat Proyek'] ?? row.Tempat ?? row['Nama Tempat'] ?? row.Lokasi ?? row.location;
   const location = normalizeMaterialLocation(rawLocation ? String(rawLocation) : fallbackLocation);
 
