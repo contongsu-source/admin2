@@ -8,6 +8,8 @@ export const config = {
   },
 };
 
+export const maxDuration = 60; // Set max execution time for Vercel to 60 seconds
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -48,7 +50,7 @@ Abaikan baris total keseluruhan atau ongkos kirim.
 `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: { parts: [imagePart, { text: prompt }] },
       config: {
         responseMimeType: "application/json",
