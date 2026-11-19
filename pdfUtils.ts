@@ -216,3 +216,53 @@ export async function triggerPrintWithPdfFallback(options: {
 
   return 'printed';
 }
+
+export async function printReactIframeWithPdfFallback(
+  target: HTMLIFrameElement,
+  options: {
+    getElement?: () => HTMLElement | null;
+    pdfOptions?: DownloadPdfOptions;
+  }
+): Promise<void> {
+  const cw = target.contentWindow;
+  let beforePrintFired = false;
+  const onBeforePrint = () => {
+    beforePrintFired = true;
+  };
+  cw?.addEventListener('beforeprint', onBeforePrint);
+
+  const start = performance.now();
+  let printThrew = false;
+
+  try {
+    cw?.focus();
+    cw?.print();
+  } catch {
+    printThrew = true;
+  } finally {
+    cw?.removeEventListener('beforeprint', onBeforePrint);
+  }
+
+  const elapsed = performance.now() - start;
+  let inIframe = false;
+  try {
+    inIframe = window.self !== window.top;
+  } catch {
+    inIframe = true;
+  }
+
+  const needsFallback =
+    printThrew ||
+    shouldUsePdfFallbackForPrint({
+      inIframe,
+      beforePrintFired,
+      printDurationMs: elapsed,
+    });
+
+  if (needsFallback && options.getElement) {
+    const el = options.getElement();
+    if (el) {
+      await downloadElementAsPdf(el, options.pdfOptions);
+    }
+  }
+}
