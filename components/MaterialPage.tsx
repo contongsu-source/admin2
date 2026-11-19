@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import {
   ALL_LOCATIONS_FILTER,
   extractUniqueMaterialLocations,
+  formatMaterialDate,
   getLocationGroupKey,
   groupMaterialsByLocation,
   normalizeMaterialLocation,
@@ -868,7 +869,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onU
                         <div className="min-w-0">
                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
                                <Calendar className="w-3 h-3" />
-                               {item.date}
+                               {formatMaterialDate(item.date)}
                            </div>
                            <h4 className="font-bold text-gray-900 dark:text-white text-lg leading-tight break-words">{item.itemName}</h4>
                         </div>
@@ -1012,7 +1013,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onU
                       {group.items.map((item, idx) => (
                           <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors print:hover:bg-transparent">
                               <td className="px-4 py-3 text-center text-gray-500 dark:text-gray-400 print:text-black print:px-1 print:py-0.5">{idx + 1}</td>
-                              <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium print:text-black print:px-1.5 print:py-0.5 print:whitespace-nowrap">{item.date}</td>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium print:text-black print:px-1.5 print:py-0.5 print:whitespace-nowrap tabular-nums">{formatMaterialDate(item.date)}</td>
                               <td className="px-4 py-3 font-bold text-gray-900 dark:text-white print:font-semibold print:text-black print:px-1.5 print:py-0.5">{item.itemName}</td>
                               <td className="px-4 py-3 text-center no-print">
                                   {item.receiptImage ? (
@@ -1411,7 +1412,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onU
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
-                          {payment.date}
+                          {formatMaterialDate(payment.date)}
                         </span>
                         <span className="font-semibold text-gray-900 dark:text-white truncate">
                           {payment.note || 'Pembayaran Material'}
