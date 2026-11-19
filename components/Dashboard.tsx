@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
 import { AppState, DailyAttendance } from '../types';
-import { Users, DollarSign, Calendar, TrendingUp, ArrowUpRight, Briefcase, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Users, DollarSign, Calendar, TrendingUp, ArrowUpRight, Briefcase, AlertCircle, CheckCircle2, Printer, Layers } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface DashboardProps {
   state: AppState;
+  onChangeView?: (view: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ state, onChangeView }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
   const materials = state.materials[currentPeriod?.id || ''] || [];
@@ -31,10 +32,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
       let workDays = 0;
       let overtimeHours = 0;
       
+      const startDateStr = currentPeriod?.startDate || '';
+      const endDateStr = currentPeriod?.endDate || '';
+
       Object.values(record.days).forEach((day: DailyAttendance) => {
-        if (day.isPresent) workDays++;
-        if (day.extraWorkDays) workDays += day.extraWorkDays;
-        overtimeHours += day.overtimeHours;
+        if (day.date >= startDateStr && day.date <= endDateStr) {
+            if (day.isPresent) workDays++;
+            if (day.extraWorkDays) workDays += day.extraWorkDays;
+            overtimeHours += day.overtimeHours;
+        }
       });
       
       const dailyRate = record.dailyRate ?? emp.dailyRate;
@@ -48,8 +54,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
   const totalCost = totalMaterialCost + payrollData;
 
   const costDistribution = [
-    { name: 'Upah Karyawan', value: payrollData, color: '#0ea5e9' },
-    { name: 'Material', value: totalMaterialCost, color: '#f59e0b' },
+    { name: 'Upah Karyawan', value: payrollData, color: '#16a34a' },
+    { name: 'Material', value: totalMaterialCost, color: '#eab308' },
   ];
 
   // Calculate Overall Project Finances
@@ -59,15 +65,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
   projectPeriods.forEach(period => {
       // Payroll
       const attRecords = state.attendance[period.id] || [];
+      
       attRecords.forEach(record => {
-          const emp = state.employees.find(e => e.id === record.employeeId);
+          const emp = state.employees.find(e => e.id === record.employeeId && e.projectId === state.currentProjectId);
           if (emp) {
               let workDays = 0;
               let overtimeHours = 0;
               Object.values(record.days).forEach((day: any) => {
-                  if (day.isPresent) workDays++;
-                  if (day.extraWorkDays) workDays += day.extraWorkDays;
-                  overtimeHours += day.overtimeHours || 0;
+                  if (day.date >= period.startDate && day.date <= period.endDate) {
+                      if (day.isPresent) workDays++;
+                      if (day.extraWorkDays) workDays += day.extraWorkDays;
+                      overtimeHours += day.overtimeHours || 0;
+                  }
               });
               
               const dailyRate = record.dailyRate ?? emp.dailyRate;
@@ -92,19 +101,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
 
   // Helper component for stats card
   const StatCard = ({ title, value, icon: Icon, colorClass, bgClass, subtext }: any) => (
-      <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-shadow">
+      <div className="bg-white dark:bg-[#132018] p-4 md:p-6 rounded-2xl border border-brand-100/80 dark:border-brand-900/50 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-3 md:mb-4">
               <div className={`p-2 md:p-3 rounded-xl ${bgClass}`}>
                   <Icon className={`w-5 h-5 md:w-6 md:h-6 ${colorClass}`} />
               </div>
-              <div className="flex items-center gap-1 text-[10px] md:text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
+              <div className="flex items-center gap-1 text-[10px] md:text-xs font-semibold text-brand-700 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-300 px-2 py-1 rounded-full">
                   <ArrowUpRight className="w-3 h-3" />
                   <span>Aktif</span>
               </div>
           </div>
           <div>
               <p className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400 mb-0.5 md:mb-1">{title}</p>
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight truncate">{value}</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight truncate tabular-nums">{value}</h3>
               {subtext && <p className="text-[10px] md:text-xs text-gray-400 mt-1 md:mt-2 line-clamp-1">{subtext}</p>}
           </div>
       </div>
@@ -117,9 +126,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Dashboard</h2>
           <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm md:text-base">Ringkasan proyek <span className="font-semibold text-gray-700 dark:text-gray-300">{currentProject?.name}</span></p>
         </div>
-        <div className="text-xs md:text-sm text-gray-500 font-medium bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg w-fit flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5" />
-            Periode: <span className="text-gray-900 dark:text-white font-bold">{currentPeriod?.name}</span>
+        <div className="flex flex-wrap items-center gap-2">
+            <div className="text-xs md:text-sm text-gray-600 dark:text-gray-300 font-medium bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800/50 px-3 py-1.5 rounded-lg w-fit flex items-center gap-2">
+                <Calendar className="w-3.5 h-3.5 text-brand-600 dark:text-accent-400" />
+                Periode: <span className="text-gray-900 dark:text-white font-bold">{currentPeriod?.name}</span>
+            </div>
+            {onChangeView && (
+              <>
+                <button
+                  onClick={() => onChangeView('project_summary')}
+                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs md:text-sm font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                  title="Tandai & gabungkan total gaji dan material dari beberapa proyek"
+                >
+                  <Layers className="w-3.5 h-3.5 text-accent-300" />
+                  <span>Gabung Proyek</span>
+                </button>
+                <button
+                  onClick={() => onChangeView('consolidated_report')}
+                  className="bg-accent-400 hover:bg-accent-500 text-brand-950 text-xs md:text-sm font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                  title="Cetak Absensi, Gaji, Material, dan Invoice dalam 1 Lembar"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak 1 Lembar</span>
+                </button>
+              </>
+            )}
         </div>
       </div>
 
@@ -129,41 +160,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
             title="Pengeluaran Periode Ini" 
             value={`Rp ${totalCost.toLocaleString('id-ID')}`} 
             icon={DollarSign}
-            bgClass="bg-blue-50 dark:bg-blue-900/20"
-            colorClass="text-blue-600 dark:text-blue-400"
+            bgClass="bg-brand-50 dark:bg-brand-900/30"
+            colorClass="text-brand-600 dark:text-brand-400"
             subtext="Material + Gaji"
         />
         <StatCard 
             title="Total Karyawan" 
             value={projectEmployees.length} 
             icon={Users}
-            bgClass="bg-green-50 dark:bg-green-900/20"
-            colorClass="text-green-600 dark:text-green-400"
+            bgClass="bg-accent-100 dark:bg-accent-900/30"
+            colorClass="text-accent-700 dark:text-accent-400"
             subtext="Terdaftar"
         />
         <StatCard 
             title="Sisa Hari" 
             value={currentPeriod?.endDate ? Math.max(0, Math.ceil((new Date(currentPeriod.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) + " Hari" : "-"} 
             icon={Calendar}
-            bgClass="bg-purple-50 dark:bg-purple-900/20"
-            colorClass="text-purple-600 dark:text-purple-400"
+            bgClass="bg-brand-50 dark:bg-brand-900/30"
+            colorClass="text-brand-700 dark:text-brand-300"
             subtext={`Berakhir ${currentPeriod?.endDate}`}
         />
          <StatCard 
             title="Material" 
             value={`Rp ${totalMaterialCost.toLocaleString('id-ID')}`} 
             icon={TrendingUp}
-            bgClass="bg-orange-50 dark:bg-orange-900/20"
-            colorClass="text-orange-600 dark:text-orange-400"
+            bgClass="bg-accent-100 dark:bg-accent-900/30"
+            colorClass="text-accent-700 dark:text-accent-400"
             subtext={`${materials.length} item`}
         />
       </div>
 
       {/* Overall Project Budget Status */}
-      <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
+      <div className="bg-white dark:bg-[#132018] p-4 md:p-6 rounded-2xl border border-brand-100/80 dark:border-brand-900/50 shadow-sm">
           <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
+                  <div className="p-2 bg-accent-100 dark:bg-accent-900/30 rounded-lg text-accent-700 dark:text-accent-400">
                       <Briefcase className="w-5 h-5" />
                   </div>
                   <div>
@@ -172,9 +203,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
                   </div>
               </div>
               <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
-                  currentProject?.status === 'Selesai' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
-                  currentProject?.status === 'Pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 
-                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  currentProject?.status === 'Selesai' ? 'bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300' : 
+                  currentProject?.status === 'Pending' ? 'bg-accent-100 text-accent-800 dark:bg-accent-900/40 dark:text-accent-300' : 
+                  'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300'
               }`}>
                   {currentProject?.status === 'Selesai' ? <CheckCircle2 className="w-3.5 h-3.5" /> : 
                    currentProject?.status === 'Pending' ? <AlertCircle className="w-3.5 h-3.5" /> : 
@@ -184,17 +215,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Dana Masuk (Budget)</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">Rp {budget.toLocaleString('id-ID')}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">Rp {budget.toLocaleString('id-ID')}</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Terpakai</p>
-                  <p className="text-lg font-bold text-red-600 dark:text-red-400">Rp {overallTerpakai.toLocaleString('id-ID')}</p>
+              <div className="bg-accent-50/70 dark:bg-accent-900/15 p-4 rounded-xl border border-accent-200/70 dark:border-accent-800/40">
+                  <p className="text-xs font-medium text-accent-800 dark:text-accent-300 mb-1">Total Terpakai</p>
+                  <p className="text-lg font-bold text-accent-900 dark:text-accent-200 tabular-nums">Rp {overallTerpakai.toLocaleString('id-ID')}</p>
               </div>
-              <div className={`p-4 rounded-xl border ${sisa >= 0 ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30'}`}>
-                  <p className={`text-xs font-medium mb-1 ${sisa >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>Sisa / (Kurang)</p>
-                  <p className={`text-lg font-bold ${sisa >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>Rp {sisa.toLocaleString('id-ID')}</p>
+              <div className={`p-4 rounded-xl border ${sisa >= 0 ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200/70 dark:border-brand-800/40' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30'}`}>
+                  <p className={`text-xs font-medium mb-1 ${sisa >= 0 ? 'text-brand-700 dark:text-brand-400' : 'text-red-600 dark:text-red-400'}`}>Sisa / (Kurang)</p>
+                  <p className={`text-lg font-bold tabular-nums ${sisa >= 0 ? 'text-brand-800 dark:text-brand-300' : 'text-red-700 dark:text-red-300'}`}>Rp {sisa.toLocaleString('id-ID')}</p>
               </div>
           </div>
 
@@ -202,11 +233,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
           <div>
               <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
                   <span>Penggunaan Anggaran</span>
-                  <span>{budgetPercentage.toFixed(1)}%</span>
+                  <span className="tabular-nums">{budgetPercentage.toFixed(1)}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
                   <div 
-                      className={`h-2.5 rounded-full ${budgetPercentage > 90 ? 'bg-red-500' : budgetPercentage > 75 ? 'bg-amber-500' : 'bg-brand-500'}`} 
+                      className={`h-2.5 rounded-full ${budgetPercentage > 90 ? 'bg-red-500' : budgetPercentage > 75 ? 'bg-accent-500' : 'bg-brand-500'}`} 
                       style={{ width: `${budgetPercentage}%` }}
                   ></div>
               </div>
@@ -215,7 +246,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
+        <div className="bg-white dark:bg-[#132018] p-4 md:p-6 rounded-2xl border border-brand-100/80 dark:border-brand-900/50 shadow-sm">
           <div className="flex items-center justify-between mb-6">
              <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">Distribusi Biaya</h3>
              <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -262,10 +293,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ state }) => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm flex flex-col">
+        <div className="bg-white dark:bg-[#132018] p-6 rounded-2xl border border-brand-100/80 dark:border-brand-900/50 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-6">
              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Ringkasan Material</h3>
-             <button className="text-sm text-brand-600 font-medium hover:text-brand-700">Lihat Semua</button>
+             <button onClick={() => onChangeView && onChangeView('materials')} className="text-sm text-brand-600 dark:text-accent-400 font-semibold hover:text-brand-700">Lihat Semua</button>
           </div>
           <div className="flex-1 overflow-x-auto">
             <table className="w-full text-sm text-left">

@@ -9,9 +9,10 @@ interface PayrollPageProps {
   onUpdateEmployee?: (emp: Employee) => void;
   onUpdateAttendance?: (records: AttendanceRecord[]) => void;
   hideSlips?: boolean;
+  onChangeView?: (view: string) => void;
 }
 
-export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmployee, onUpdateAttendance, hideSlips = false }) => {
+export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmployee, onUpdateAttendance, hideSlips = false, onChangeView }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
   const records = state.attendance[currentPeriod?.id || ''] || [];
@@ -55,7 +56,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       }, 100);
   };
 
-  const updateRate = (empId: string, field: 'dailyRate' | 'overtimeRate', value: string) => {
+  const updateRate = (empId: string, field: 'dailyRate' | 'overtimeRate' | 'cashAdvance', value: string) => {
       if(onUpdateAttendance) {
           const newRecords = records.map(r => {
               if (r.employeeId === empId) {
@@ -72,7 +73,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
 
   // Filter employees for the current project who have attendance records in the current period
   const periodEmployeeIds = new Set(records.map(r => r.employeeId));
-  const periodEmployees = state.employees.filter(e => periodEmployeeIds.has(e.id));
+  const periodEmployees = state.employees.filter(e => periodEmployeeIds.has(e.id) && e.projectId === state.currentProjectId);
 
   const payrollData = periodEmployees.map(emp => {
     const record = records.find(r => r.employeeId === emp.id);
@@ -81,24 +82,32 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
     let overtimeHours = 0;
 
     if (record) {
+      const startDateStr = currentPeriod?.startDate || '';
+      const endDateStr = currentPeriod?.endDate || '';
+
       Object.values(record.days).forEach((day: DailyAttendance) => {
-        if (day.isPresent) workDays++;
-        if (day.extraWorkDays) workDays += day.extraWorkDays;
-        overtimeHours += day.overtimeHours;
+        // ONLY count the day if it falls within the current period
+        if (day.date >= startDateStr && day.date <= endDateStr) {
+            if (day.isPresent) workDays++;
+            if (day.extraWorkDays) workDays += day.extraWorkDays;
+            overtimeHours += day.overtimeHours;
+        }
       });
     }
 
     const dailyRate = record?.dailyRate ?? emp.dailyRate;
     const overtimeRate = record?.overtimeRate ?? emp.overtimeRate;
+    const cashAdvance = record?.cashAdvance ?? 0;
 
     const basicSalary = workDays * dailyRate;
     const overtimeSalary = overtimeHours * overtimeRate;
-    const totalSalary = basicSalary + overtimeSalary;
+    const totalSalary = basicSalary + overtimeSalary - cashAdvance;
 
     return {
       emp,
       dailyRate,
       overtimeRate,
+      cashAdvance,
       workDays,
       overtimeHours,
       basicSalary,
@@ -136,6 +145,16 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                     <FileText className="w-4 h-4" />
                     Cetak Rekap
                 </button>
+                {onChangeView && (
+                    <button 
+                        onClick={() => onChangeView('consolidated_report')}
+                        className="bg-accent-400 hover:bg-accent-500 text-brand-950 px-3.5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm h-10"
+                        title="Cetak Absensi, Gaji, Material, dan Invoice dalam 1 Lembar"
+                    >
+                        <Printer className="w-4 h-4" />
+                        Cetak 1 Lembar Terpadu
+                    </button>
+                )}
                 {!hideSlips && (
                     <button 
                         onClick={handlePrintSlips}
@@ -186,7 +205,8 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                         <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Lembur/Jm</th>
                         <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Tot. Gaji</th>
                         <th className="px-4 py-3 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Tot. Lembur</th>
-                        <th className="px-4 py-3 text-right bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700 print:bg-white print:border-black print:px-1 print:py-1">Terima</th>
+                        <th className="px-4 py-3 text-right text-red-600 dark:text-red-400 border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1 print:py-1">Pot. Kasbon</th>
+                        <th className="px-4 py-3 text-right bg-brand-50 dark:bg-brand-900/20 border-b border-gray-200 dark:border-gray-700 print:bg-white print:border-black print:px-1 print:py-1">Terima</th>
                         <th className="px-4 py-3 text-center border-b border-gray-200 dark:border-gray-700 no-print">Slip</th>
                     </tr>
                 </thead>
@@ -235,7 +255,19 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                             <td className="px-4 py-3 text-right font-medium dark:text-gray-200 print:px-1 print:py-1">
                                 {row.overtimeSalary > 0 ? row.overtimeSalary.toLocaleString('id-ID') : '-'}
                             </td>
-                            <td className="px-4 py-3 text-right font-bold text-brand-700 dark:text-brand-400 bg-blue-50/30 dark:bg-blue-900/10 print:bg-transparent print:text-black print:px-1 print:py-1">
+                            <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 font-medium print:text-black print:px-1 print:py-1">
+                                {isEditingRates ? (
+                                    <input 
+                                        type="number" 
+                                        className="w-24 px-2 py-1 text-right border border-red-300 dark:border-red-800 dark:bg-gray-700 rounded focus:ring-2 focus:ring-red-500 outline-none"
+                                        value={row.cashAdvance}
+                                        onChange={(e) => updateRate(row.emp.id, 'cashAdvance', e.target.value)}
+                                    />
+                                ) : (
+                                    row.cashAdvance > 0 ? `- ${row.cashAdvance.toLocaleString('id-ID')}` : '-'
+                                )}
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-brand-700 dark:text-brand-400 bg-brand-50/30 dark:bg-brand-900/10 print:bg-transparent print:text-black print:px-1 print:py-1">
                                 {row.totalSalary.toLocaleString('id-ID')}
                             </td>
                             <td className="px-4 py-3 text-center no-print">
@@ -297,6 +329,14 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                                                         <td className="p-2 text-right font-medium">{row.overtimeSalary.toLocaleString('id-ID')}</td>
                                                     </tr>
                                                 )}
+                                                {row.cashAdvance > 0 && (
+                                                    <tr className="border-b" style={{ borderColor: '#d1d5db', color: '#ef4444' }}>
+                                                        <td className="p-2 border-r" style={{ borderColor: '#d1d5db' }}>Potongan Kasbon / Bon PK</td>
+                                                        <td className="p-2 text-center border-r" style={{ borderColor: '#d1d5db' }}>-</td>
+                                                        <td className="p-2 text-right border-r" style={{ borderColor: '#d1d5db' }}>-</td>
+                                                        <td className="p-2 text-right font-medium">- {row.cashAdvance.toLocaleString('id-ID')}</td>
+                                                    </tr>
+                                                )}
                                             </tbody>
                                         </table>
                                          <div className="p-2 italic text-xs mb-4 border-l-2" style={{ backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#1f2937' }}>
@@ -318,15 +358,18 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                         </tr>
                     ))}
                 </tbody>
-                <tfoot className="bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 print:bg-white print:border-t-2 print:border-black">
-                    <tr>
-                        <td colSpan={8} className="px-4 py-4 text-right font-bold text-gray-900 dark:text-white uppercase print:px-1 print:py-1">Grand Total</td>
-                        <td className="px-4 py-4 text-right font-bold text-brand-700 dark:text-brand-400 text-lg print:text-black print:text-xs print:px-1 print:py-1">
-                            Rp {grandTotal.toLocaleString('id-ID')}
-                        </td>
-                        <td className="no-print"></td>
-                    </tr>
-                </tfoot>
+                    <tfoot className="bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 print:bg-white print:border-t-2 print:border-black">
+                        <tr>
+                            <td colSpan={8} className="px-4 py-4 text-right font-bold text-gray-900 dark:text-white uppercase print:px-1 print:py-1">Grand Total</td>
+                            <td className="px-4 py-4 text-right text-red-600 dark:text-red-400 font-bold print:text-black print:text-xs print:px-1 print:py-1">
+                                {payrollData.reduce((acc, curr) => acc + curr.cashAdvance, 0) > 0 ? `- ${payrollData.reduce((acc, curr) => acc + curr.cashAdvance, 0).toLocaleString('id-ID')}` : '-'}
+                            </td>
+                            <td className="px-4 py-4 text-right font-bold text-brand-700 dark:text-brand-400 text-lg print:text-black print:text-xs print:px-1 print:py-1">
+                                Rp {grandTotal.toLocaleString('id-ID')}
+                            </td>
+                            <td className="no-print"></td>
+                        </tr>
+                    </tfoot>
             </table>
         </div>
         {isEditingRates && (
@@ -400,6 +443,14 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                                     <td className="p-2 text-center border-r border-gray-300">{row.overtimeHours} Jam</td>
                                     <td className="p-2 text-right border-r border-gray-300">{row.overtimeRate.toLocaleString('id-ID')}</td>
                                     <td className="p-2 text-right font-medium">{row.overtimeSalary.toLocaleString('id-ID')}</td>
+                                </tr>
+                            )}
+                            {row.cashAdvance > 0 && (
+                                <tr className="border-b border-gray-300 text-red-600">
+                                    <td className="p-2 border-r border-gray-300">Potongan Kasbon / Bon PK</td>
+                                    <td className="p-2 text-center border-r border-gray-300">-</td>
+                                    <td className="p-2 text-right border-r border-gray-300">-</td>
+                                    <td className="p-2 text-right font-medium">- {row.cashAdvance.toLocaleString('id-ID')}</td>
                                 </tr>
                             )}
                         </tbody>

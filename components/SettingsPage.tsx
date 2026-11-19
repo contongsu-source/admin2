@@ -265,26 +265,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       {/* Cloud Sync Section - Removed as it's now handled automatically via Firebase */}
 
       {/* Manual Backup & Restore Section */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-900 dark:to-pink-900 p-6 rounded-xl shadow-lg text-white print:hidden">
+      <div className="bg-gradient-to-r from-brand-800 to-brand-600 dark:from-brand-950 dark:to-brand-800 p-6 rounded-xl shadow-lg text-white print:hidden border border-brand-700/50">
           <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                  <FileJson className="w-6 h-6 text-white" />
+              <div className="p-2 bg-accent-400/20 rounded-lg backdrop-blur-sm border border-accent-300/30">
+                  <FileJson className="w-6 h-6 text-accent-300" />
               </div>
               <div>
                 <h3 className="text-lg font-bold">Backup & Restore Manual</h3>
-                <p className="text-purple-100 text-sm">Simpan data ke file atau pulihkan dari file</p>
+                <p className="text-brand-100 text-sm">Simpan data ke file atau pulihkan dari file</p>
               </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-                  <h4 className="font-semibold mb-2 text-sm uppercase tracking-wider text-purple-200">Download Data (Backup)</h4>
-                  <p className="text-xs text-purple-100 mb-4">
+                  <h4 className="font-semibold mb-2 text-sm uppercase tracking-wider text-accent-300">Download Data (Backup)</h4>
+                  <p className="text-xs text-brand-100 mb-4">
                       Unduh semua data aplikasi saat ini ke dalam file JSON untuk disimpan di perangkat Anda.
                   </p>
                   <button 
                     onClick={handleBackup}
-                    className="w-full bg-white text-purple-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-50 transition flex items-center justify-center gap-2"
+                    className="w-full bg-accent-400 text-brand-950 px-4 py-2 rounded-lg text-sm font-bold hover:bg-accent-300 transition flex items-center justify-center gap-2"
                   >
                       <Download className="w-4 h-4" />
                       Download Backup (.json)
@@ -292,11 +292,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
 
               <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-                  <h4 className="font-semibold mb-2 text-sm uppercase tracking-wider text-purple-200">Upload Data (Restore)</h4>
-                  <p className="text-xs text-purple-100 mb-4">
+                  <h4 className="font-semibold mb-2 text-sm uppercase tracking-wider text-accent-300">Upload Data (Restore)</h4>
+                  <p className="text-xs text-brand-100 mb-4">
                       Kembalikan data dari file backup yang sudah Anda download sebelumnya.
                   </p>
-                  <label className="w-full bg-white text-purple-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-50 transition flex items-center justify-center gap-2 cursor-pointer">
+                  <label className="w-full bg-white text-brand-800 px-4 py-2 rounded-lg text-sm font-bold hover:bg-brand-50 transition flex items-center justify-center gap-2 cursor-pointer">
                       <Upload className="w-4 h-4" />
                       Pilih File Backup
                       <input 
@@ -617,13 +617,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 </tbody>
             </table>
         </div>
-        <p className="mt-4 text-xs text-gray-500 dark:text-gray-400 italic">* Mengubah tanggal akan otomatis memperbarui nama periode dan kolom absensi.</p>
+        <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <h4 className="text-sm font-bold text-yellow-800 dark:text-yellow-400 mb-1">PENTING: Cara Pindah ke Periode Berikutnya</h4>
+            <ul className="text-xs text-yellow-700 dark:text-yellow-500 list-disc list-inside space-y-1">
+                <li>Gunakan tombol <strong>M. Depan</strong> atau <strong>B. Lalu</strong> untuk membuat periode pencatatan absen yang BENAR-BENAR BARU. Data absen dan kasbon tidak akan tergabung.</li>
+                <li><strong>Jangan</strong> mengganti tanggal secara manual (mengetik tanggal baru) jika tujuannya pindah minggu, karena itu hanya akan mengubah tanggal periode aktif saat ini sehingga absen dan kasbon akan berlanjut (tergabung). Ubah tanggal manual hanya jika Anda salah ketik (typo) atau ingin memperpanjang periode menjadi lebih dari seminggu.</li>
+            </ul>
+        </div>
       </div>
       {/* Project Budget Management Section */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm print:border-none print:shadow-none print:p-0">
         <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 print:hidden">
+                <div className="p-2 bg-accent-100 dark:bg-accent-900/30 rounded-lg text-accent-700 dark:text-accent-400 print:hidden">
                     <FileJson className="w-5 h-5" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white print:text-2xl print:mb-4">Manajemen Anggaran Proyek</h3>
@@ -659,14 +665,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                             // Payroll
                             const attendanceRecords = state.attendance[period.id] || [];
                             attendanceRecords.forEach(record => {
-                                const emp = state.employees.find(e => e.id === record.employeeId);
+                                const emp = state.employees.find(e => e.id === record.employeeId && e.projectId === project.id);
                                 if (emp) {
                                     let workDays = 0;
                                     let overtimeHours = 0;
+                                    
                                     Object.values(record.days).forEach((day: any) => {
-                                        if (day.isPresent) workDays++;
-                                        if (day.extraWorkDays) workDays += day.extraWorkDays;
-                                        overtimeHours += day.overtimeHours || 0;
+                                        if (day.date >= period.startDate && day.date <= period.endDate) {
+                                            if (day.isPresent) workDays++;
+                                            if (day.extraWorkDays) workDays += day.extraWorkDays;
+                                            overtimeHours += day.overtimeHours || 0;
+                                        }
                                     });
                                     const dailyRate = record.dailyRate ?? emp.dailyRate;
                                     const overtimeRate = record.overtimeRate ?? emp.overtimeRate;
@@ -722,7 +731,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                         <span className="font-bold text-gray-900 dark:text-white print:text-gray-900">Rp {budget.toLocaleString('id-ID')}</span>
                                         <button 
                                             onClick={() => setManagingFundsFor(project.id)}
-                                            className="print:hidden text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-1"
+                                            className="print:hidden text-[10px] bg-accent-100 text-accent-800 dark:bg-accent-900/40 dark:text-accent-300 px-2 py-1 rounded hover:bg-accent-200 dark:hover:bg-accent-800 transition-colors flex items-center gap-1 font-semibold"
                                         >
                                             <Edit2 className="w-3 h-3" />
                                             Rincian Dana
@@ -738,7 +747,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                 <td className="px-4 py-3 text-center print:hidden">
                                     <button 
                                         onClick={() => triggerPrint(project.id)}
-                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 border border-blue-200 dark:border-blue-800 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                        className="text-brand-700 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300 p-1 border border-brand-200 dark:border-brand-800 rounded hover:bg-brand-50 dark:hover:bg-brand-900/30"
                                         title="Cetak Laporan Proyek"
                                     >
                                         <Printer className="w-4 h-4" />

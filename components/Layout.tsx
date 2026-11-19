@@ -25,7 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
   const projectPeriods = state.periods.filter(p => p.projectId === state.currentProjectId);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200 font-sans selection:bg-brand-500 selection:text-white print:block print:min-h-0 print:bg-white">
+    <div className="flex min-h-screen bg-[#f6f9f6] dark:bg-[#0d1510] transition-colors duration-200 font-sans selection:bg-brand-600 selection:text-white print:block print:min-h-0 print:bg-white">
       <Sidebar 
         currentView={currentView} 
         onChangeView={onChangeView} 
@@ -36,45 +36,48 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
       
       <div className="flex-1 flex flex-col min-h-screen md:ml-72 transition-all duration-300 w-full print:block print:min-h-0 print:ml-0">
         {/* Top Header */}
-        <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 h-auto min-h-[4rem] md:h-20 flex flex-wrap md:flex-nowrap items-center justify-between px-4 py-3 md:px-8 sticky top-0 z-20 no-print transition-colors duration-200 gap-3">
+        <header className="bg-white/90 dark:bg-[#111c16]/90 backdrop-blur-md border-b border-brand-100 dark:border-brand-900/60 h-auto min-h-[4rem] md:h-20 flex flex-wrap md:flex-nowrap items-center justify-between px-4 py-3 md:px-8 sticky top-0 z-20 no-print transition-colors duration-200 gap-3">
           <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 w-full md:w-auto">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl active:scale-95 transition-transform shrink-0"
+              aria-label="Buka menu navigasi"
+              className="md:hidden p-2 -ml-2 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-xl active:scale-95 transition-transform shrink-0"
             >
               <Menu className="w-6 h-6" />
             </button>
 
             {/* Project Selector Container */}
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 flex-1 min-w-0">
-              <span className="hidden md:inline text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 shrink-0">Proyek Aktif</span>
+              <span className="hidden md:inline text-xs font-semibold uppercase tracking-wider text-brand-700/70 dark:text-brand-300/70 shrink-0">Proyek Aktif</span>
               
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full max-w-full">
                   <div className="relative flex-1 w-full sm:w-auto group">
                     <select 
+                      aria-label="Pilih proyek aktif"
                       value={state.currentProjectId}
                       onChange={(e) => onProjectChange(e.target.value)}
-                      className="appearance-none w-full bg-gray-100 dark:bg-gray-700/50 border-0 text-gray-900 dark:text-white text-sm font-semibold rounded-lg pl-3 pr-8 py-2 focus:ring-2 focus:ring-brand-500 cursor-pointer transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 truncate"
+                      className="appearance-none w-full bg-brand-50/70 dark:bg-brand-900/30 border border-brand-200/80 dark:border-brand-800/60 text-gray-900 dark:text-white text-sm font-semibold rounded-lg pl-3 pr-8 py-2 focus:ring-2 focus:ring-brand-500 cursor-pointer transition-colors hover:bg-brand-100/70 dark:hover:bg-brand-900/50 truncate"
                     >
                       {state.projects.map(p => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none group-hover:text-gray-700 dark:text-gray-400" />
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-700 pointer-events-none dark:text-brand-300" />
                   </div>
                   
                   {state.currentProjectId && projectPeriods.length > 0 && (
                       <div className="relative group w-full sm:w-auto">
                         <select 
+                          aria-label="Pilih periode kerja"
                           value={currentProject?.currentPeriodId}
                           onChange={(e) => onPeriodChange(state.currentProjectId, e.target.value)}
-                          className="appearance-none w-full sm:w-auto bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800/50 text-brand-600 dark:text-brand-400 text-xs font-medium rounded-md pl-3 pr-8 py-2 focus:ring-1 focus:ring-brand-500 cursor-pointer transition-colors hover:bg-brand-100 dark:hover:bg-brand-900/50 truncate"
+                          className="appearance-none w-full sm:w-auto bg-accent-50 dark:bg-accent-900/25 border border-accent-300/80 dark:border-accent-700/50 text-accent-900 dark:text-accent-300 text-xs font-semibold rounded-md pl-3 pr-8 py-2 focus:ring-1 focus:ring-accent-500 cursor-pointer transition-colors hover:bg-accent-100 dark:hover:bg-accent-900/40 truncate"
                         >
                           {projectPeriods.map(per => (
                             <option key={per.id} value={per.id}>{per.name}</option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-500 pointer-events-none" />
+                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-accent-700 dark:text-accent-300 pointer-events-none" />
                       </div>
                   )}
               </div>
@@ -85,35 +88,36 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
           <div className="flex items-center gap-2 md:gap-4 shrink-0 ml-auto md:ml-3">
              <button 
                onClick={onToggleTheme}
-               className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-all active:scale-95"
+               aria-label={isDarkMode ? "Ubah ke Mode Terang" : "Ubah ke Mode Gelap"}
+               className="p-2 rounded-xl text-brand-700 hover:bg-brand-50 dark:text-accent-300 dark:hover:bg-brand-900/40 transition-all active:scale-95"
                title={isDarkMode ? "Mode Terang" : "Mode Gelap"}
              >
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
              </button>
              
-             <div className="flex items-center gap-3 pl-2 md:border-l border-gray-200 dark:border-gray-700">
+             <div className="flex items-center gap-3 pl-2 md:border-l border-brand-100 dark:border-brand-900/60">
                 {user ? (
                   <>
                     <div className="hidden md:flex flex-col items-end">
                         <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{user.displayName || 'User'}</span>
-                        <span className="text-[10px] text-green-600 dark:text-green-400 font-bold flex items-center gap-1">
-                           <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online
+                        <span className="text-[10px] text-brand-600 dark:text-brand-400 font-bold flex items-center gap-1">
+                           <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse"></span> Online
                         </span>
                     </div>
                     {user.photoURL ? (
-                      <img src={user.photoURL} alt="Profile" className="w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-white dark:ring-gray-800" referrerPolicy="no-referrer" />
+                      <img src={user.photoURL} alt="Profile" className="w-8 h-8 md:w-10 md:h-10 rounded-full ring-2 ring-accent-400 dark:ring-accent-500" referrerPolicy="no-referrer" />
                     ) : (
-                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 shadow-md shadow-brand-500/30 flex items-center justify-center text-white font-bold text-xs md:text-sm ring-2 ring-white dark:ring-gray-800">
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-brand-600 to-brand-700 shadow-md shadow-brand-500/30 flex items-center justify-center text-accent-200 font-bold text-xs md:text-sm ring-2 ring-accent-400 dark:ring-accent-500">
                          {user.displayName?.substring(0, 2).toUpperCase() || 'U'}
                       </div>
                     )}
-                    <button onClick={onLogout} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors" title="Logout">
+                    <button onClick={onLogout} aria-label="Logout" className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors" title="Logout">
                       <LogOut className="w-5 h-5" />
                     </button>
                   </>
                 ) : (
-                  <button onClick={onLogin} className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium transition-colors shadow-sm">
-                    <LogIn className="w-4 h-4" />
+                  <button onClick={onLogin} className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold transition-colors shadow-sm shadow-brand-600/20">
+                    <LogIn className="w-4 h-4 text-accent-300" />
                     <span className="hidden sm:inline">Login</span>
                   </button>
                 )}

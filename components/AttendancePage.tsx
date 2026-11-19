@@ -12,6 +12,7 @@ interface AttendancePageProps {
   onDeleteEmployee: (id: string) => void;
   onRemoveFromPeriod: (empId: string, periodId: string) => void;
   onAddToPeriod: (empId: string, periodId: string) => void;
+  onChangeView?: (view: string) => void;
 }
 
 export const AttendancePage: React.FC<AttendancePageProps> = ({ 
@@ -21,7 +22,8 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   onUpdateEmployee, 
   onDeleteEmployee,
   onRemoveFromPeriod,
-  onAddToPeriod
+  onAddToPeriod,
+  onChangeView
 }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
@@ -29,7 +31,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
   // EMPLOYEES IN THIS PERIOD (those who have attendance records)
   const periodEmployeeIds = new Set(records.map(r => r.employeeId));
-  const periodEmployees = state.employees.filter(e => periodEmployeeIds.has(e.id));
+  const periodEmployees = state.employees.filter(e => periodEmployeeIds.has(e.id) && e.projectId === state.currentProjectId);
 
   // ALL EMPLOYEES IN THIS PROJECT
   const projectEmployees = state.employees.filter(e => e.projectId === state.currentProjectId);
@@ -492,9 +494,9 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                   <div className="p-6 overflow-y-auto flex-1 dark:text-gray-200">
                       {/* Add New Form */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                        <form onSubmit={submitNewEmployee} className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-800/30">
-                            <h4 className="font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
-                                <div className="bg-blue-600 text-white p-1 rounded-md">
+                        <form onSubmit={submitNewEmployee} className="bg-brand-50 dark:bg-brand-900/15 p-5 rounded-xl border border-brand-200 dark:border-brand-800/40">
+                            <h4 className="font-bold text-brand-900 dark:text-brand-300 mb-4 flex items-center gap-2">
+                                <div className="bg-brand-600 text-accent-300 p-1 rounded-md">
                                     <Plus className="w-3 h-3" />
                                 </div>
                                 Tambah Karyawan Baru ke Sistem
@@ -503,7 +505,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                 <input 
                                     type="text" 
                                     placeholder="Nama Lengkap" 
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
                                     value={newEmp.name}
                                     onChange={e => setNewEmp({...newEmp, name: e.target.value})}
                                     required
@@ -512,7 +514,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                     <input 
                                         type="text" 
                                         placeholder="Jabatan" 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
                                         value={newEmp.position}
                                         onChange={e => setNewEmp({...newEmp, position: e.target.value})}
                                         required
@@ -520,13 +522,13 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                     <input 
                                         type="number" 
                                         placeholder="Gaji/Hari" 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
                                         value={newEmp.dailyRate}
                                         onChange={e => setNewEmp({...newEmp, dailyRate: parseInt(e.target.value) || 0})}
                                         required
                                     />
                                 </div>
-                                <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
+                                <button type="submit" className="w-full bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-brand-700 transition-colors shadow-lg shadow-brand-600/20">
                                     Simpan & Tambah ke Periode
                                 </button>
                             </div>
@@ -651,7 +653,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                               <td className="px-4 py-3 text-right">{dailyRate.toLocaleString('id-ID')}</td>
                                               <td className="px-4 py-3 text-right">{overtimeRate.toLocaleString('id-ID')}</td>
                                               <td className="px-4 py-3 text-center flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                  <button onClick={() => startEditEmployee(emp)} className="text-blue-600 hover:text-blue-800 bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-lg hover:bg-blue-100" title="Edit Data"><Edit2 className="w-4 h-4"/></button>
+                                                  <button onClick={() => startEditEmployee(emp)} className="text-brand-700 hover:text-brand-900 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-300 p-1.5 rounded-lg hover:bg-brand-100" title="Edit Data"><Edit2 className="w-4 h-4"/></button>
                                                   <button 
                                                     onClick={() => currentPeriod && onRemoveFromPeriod(emp.id, currentPeriod.id)} 
                                                     className="text-orange-500 hover:text-orange-700 bg-orange-50 dark:bg-orange-900/30 p-1.5 rounded-lg hover:bg-orange-100"
@@ -758,7 +760,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
       {viewMode === 'table' && (
       <>
         <div className="flex flex-col-reverse md:flex-row justify-between items-start md:items-center gap-4 mb-4 no-print">
-             <div className="text-xs md:text-sm text-gray-500 dark:text-gray-400 italic bg-yellow-50 dark:bg-yellow-900/10 px-3 py-2 rounded-lg border border-yellow-100 dark:border-yellow-900/30 w-full md:w-auto">
+             <div className="text-xs md:text-sm text-accent-900 dark:text-accent-300 italic bg-accent-50 dark:bg-accent-900/20 px-3 py-2 rounded-lg border border-accent-200 dark:border-accent-800/40 w-full md:w-auto">
                 <span className="font-bold">Info:</span> Gunakan "Edit Masal" untuk absen & lembur. 
              </div>
             <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -776,6 +778,16 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                     <Printer className="w-4 h-4" />
                     Cetak
                 </button>
+                {onChangeView && (
+                  <button 
+                      onClick={() => onChangeView('consolidated_report')}
+                      className="flex-1 md:flex-none bg-accent-400 hover:bg-accent-500 text-brand-950 px-3.5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
+                      title="Cetak Absensi, Gaji, Material, dan Invoice sekaligus dalam 1 Lembar"
+                  >
+                      <Printer className="w-4 h-4" />
+                      Cetak 1 Lembar Terpadu
+                  </button>
+                )}
                 {!isEditing ? (
                     <button 
                         onClick={() => setIsEditing(true)}
@@ -811,7 +823,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                     <th className="px-4 py-4 sticky left-0 md:left-12 bg-gray-50 dark:bg-gray-800 z-20 w-32 md:w-48 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">Nama</th>
                     <th className="hidden md:table-cell px-4 py-4 sticky left-60 bg-gray-50 dark:bg-gray-800 z-20 w-24 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Jabatan</th>
                     {dates.map((d) => (
-                        <th key={d.toISOString()} className={`px-2 py-4 text-center min-w-[60px] border-l border-gray-200 dark:border-gray-700 ${d.toISOString().split('T')[0] === todayStr ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}`}>
+                        <th key={d.toISOString()} className={`px-2 py-4 text-center min-w-[60px] border-l border-gray-200 dark:border-gray-700 ${d.toISOString().split('T')[0] === todayStr ? 'bg-accent-50 dark:bg-accent-900/25 text-accent-900 dark:text-accent-300' : ''}`}>
                             <div className="flex flex-col">
                                 <span className="text-[9px] opacity-70 mb-0.5">{daysOfWeek[d.getDay()]}</span>
                                 <span className="text-sm font-bold">{d.getDate()}</span>
@@ -850,7 +862,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                             return (
                                 <td 
                                     key={dateStr} 
-                                    className={`text-center border-l border-gray-50 dark:border-gray-700/50 align-top py-3 ${dateStr === todayStr ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''}`}
+                                    className={`text-center border-l border-gray-50 dark:border-gray-700/50 align-top py-3 ${dateStr === todayStr ? 'bg-accent-50/30 dark:bg-accent-900/10' : ''}`}
                                 >
                                     <div className="flex flex-col items-center gap-1.5 min-h-[40px] justify-center">
                                         {/* Presence Toggle */}
@@ -884,7 +896,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                                         value={extraWorkDays === 0 ? '' : extraWorkDays}
                                                         onChange={(e) => updateExtraWorkDays(emp.id, dateStr, parseInt(e.target.value) || 0)}
                                                         placeholder="0"
-                                                        className="w-9 text-center text-[10px] border border-blue-200 dark:border-blue-600 dark:bg-gray-700 dark:text-white rounded focus:ring-1 focus:ring-brand-500 outline-none p-0.5"
+                                                        className="w-9 text-center text-[10px] border border-brand-300 dark:border-brand-600 dark:bg-gray-700 dark:text-white rounded focus:ring-1 focus:ring-brand-500 outline-none p-0.5"
                                                         title="Tambahan Hari Kerja"
                                                     />
                                                 </div>
@@ -898,7 +910,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                                     </span>
                                                 )}
                                                 {extraWorkDays > 0 && (
-                                                    <span className="text-[9px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded-md font-bold shadow-sm" title="Tambahan Hari Kerja">
+                                                    <span className="text-[9px] bg-accent-100 text-accent-800 dark:bg-accent-900/40 dark:text-accent-300 px-1.5 py-0.5 rounded-md font-bold shadow-sm" title="Tambahan Hari Kerja">
                                                         +{extraWorkDays} Hari
                                                     </span>
                                                 )}
@@ -993,7 +1005,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                                             <div className="flex flex-col items-center">
                                                 <span>{isPresent ? '✓' : '-'}</span>
                                                 {overtime > 0 && <span className="text-[8px] font-bold">({overtime})</span>}
-                                                {extraWorkDays > 0 && <span className="text-[8px] font-bold text-blue-600">(+{extraWorkDays}h)</span>}
+                                                {extraWorkDays > 0 && <span className="text-[8px] font-bold text-black">(+{extraWorkDays}h)</span>}
                                             </div>
                                         </td>
                                     );

@@ -19,15 +19,18 @@ export const ProjectReportPrint: React.FC<ProjectReportPrintProps> = ({ state, p
     projectPeriods.forEach(period => {
         // Payroll
         const attendanceRecords = state.attendance[period.id] || [];
+        
         attendanceRecords.forEach(record => {
-            const emp = state.employees.find(e => e.id === record.employeeId);
+            const emp = state.employees.find(e => e.id === record.employeeId && e.projectId === project.id);
             if (emp) {
                 let workDays = 0;
                 let overtimeHours = 0;
                 Object.values(record.days).forEach((day: any) => {
-                    if (day.isPresent) workDays++;
-                    if (day.extraWorkDays) workDays += day.extraWorkDays;
-                    overtimeHours += day.overtimeHours || 0;
+                    if (day.date >= period.startDate && day.date <= period.endDate) {
+                        if (day.isPresent) workDays++;
+                        if (day.extraWorkDays) workDays += day.extraWorkDays;
+                        overtimeHours += day.overtimeHours || 0;
+                    }
                 });
                 const dailyRate = record.dailyRate ?? emp.dailyRate;
                 const overtimeRate = record.overtimeRate ?? emp.overtimeRate;

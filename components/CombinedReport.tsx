@@ -23,14 +23,20 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
   // Calculate totals
   let totalWages = 0;
   records.forEach(record => {
-    const emp = state.employees.find(e => e.id === record.employeeId);
+    const emp = state.employees.find(e => e.id === record.employeeId && e.projectId === state.currentProjectId);
     if (emp) {
       let workDays = 0;
       let overtimeHours = 0;
+      
+      const startDateStr = currentPeriod?.startDate || '';
+      const endDateStr = currentPeriod?.endDate || '';
+
       Object.values(record.days).forEach((day: DailyAttendance) => {
-        if (day.isPresent) workDays++;
-        if (day.extraWorkDays) workDays += day.extraWorkDays;
-        overtimeHours += day.overtimeHours;
+          if (day.date >= startDateStr && day.date <= endDateStr) {
+            if (day.isPresent) workDays++;
+            if (day.extraWorkDays) workDays += day.extraWorkDays;
+            overtimeHours += day.overtimeHours;
+          }
       });
       const dailyRate = record.dailyRate ?? emp.dailyRate;
       const overtimeRate = record.overtimeRate ?? emp.overtimeRate;
@@ -72,14 +78,20 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
               </thead>
               <tbody>
                 {records.map(record => {
-                  const emp = state.employees.find(e => e.id === record.employeeId);
+                  const emp = state.employees.find(e => e.id === record.employeeId && e.projectId === state.currentProjectId);
                   if (!emp) return null;
                   let workDays = 0;
                   let overtimeHours = 0;
+                  
+                  const startDateStr = currentPeriod?.startDate || '';
+                  const endDateStr = currentPeriod?.endDate || '';
+
                   Object.values(record.days).forEach((day: DailyAttendance) => {
-                    if (day.isPresent) workDays++;
-                    if (day.extraWorkDays) workDays += day.extraWorkDays;
-                    overtimeHours += day.overtimeHours;
+                      if (day.date >= startDateStr && day.date <= endDateStr) {
+                        if (day.isPresent) workDays++;
+                        if (day.extraWorkDays) workDays += day.extraWorkDays;
+                        overtimeHours += day.overtimeHours;
+                      }
                   });
                   return (
                     <tr key={record.employeeId} className="border-b border-gray-800">
@@ -104,18 +116,25 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
               </thead>
               <tbody>
                 {records.map(record => {
-                  const emp = state.employees.find(e => e.id === record.employeeId);
+                  const emp = state.employees.find(e => e.id === record.employeeId && e.projectId === state.currentProjectId);
                   if (!emp) return null;
                   let workDays = 0;
                   let overtimeHours = 0;
+                  
+                  const startDateStr = currentPeriod?.startDate || '';
+                  const endDateStr = currentPeriod?.endDate || '';
+
                   Object.values(record.days).forEach((day: DailyAttendance) => {
-                    if (day.isPresent) workDays++;
-                    if (day.extraWorkDays) workDays += day.extraWorkDays;
-                    overtimeHours += day.overtimeHours;
+                      if (day.date >= startDateStr && day.date <= endDateStr) {
+                        if (day.isPresent) workDays++;
+                        if (day.extraWorkDays) workDays += day.extraWorkDays;
+                        overtimeHours += day.overtimeHours;
+                      }
                   });
                   const dailyRate = record.dailyRate ?? emp.dailyRate;
                   const overtimeRate = record.overtimeRate ?? emp.overtimeRate;
-                  const totalSalary = (workDays * dailyRate) + (overtimeHours * overtimeRate);
+                  const cashAdvance = record.cashAdvance ?? 0;
+                  const totalSalary = (workDays * dailyRate) + (overtimeHours * overtimeRate) - cashAdvance;
                   return (
                     <tr key={record.employeeId} className="border-b border-gray-800">
                       <td className="py-2 px-4 border border-gray-800">{emp.name}</td>
@@ -128,7 +147,7 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
         </div>
         {/* Material Content */}
         <div className="break-after-page mb-8">
-            <h2 className="text-xl font-bold mb-4">Belanja Material</h2>
+            <h2 className="text-xl font-bold mb-4">Material</h2>
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b border-gray-800 bg-gray-50">

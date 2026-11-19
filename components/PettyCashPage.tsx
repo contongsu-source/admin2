@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppState, PettyCashTransaction } from '../types';
-import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, ArrowUpRight, ArrowDownRight, X, Printer, Upload, Info, Download, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, ArrowUpRight, ArrowDownRight, X, Printer, Upload, Info, Download, FileSpreadsheet, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface PettyCashPageProps {
@@ -22,6 +22,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
 
   const [showForm, setShowForm] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [newTrans, setNewTrans] = useState<Partial<PettyCashTransaction>>({
     date: new Date().toISOString().split('T')[0],
     description: '',
@@ -32,6 +33,101 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
   const totalIn = transactions.filter(t => t.type === 'in').reduce((acc, t) => acc + t.amount, 0);
   const totalOut = transactions.filter(t => t.type === 'out').reduce((acc, t) => acc + t.amount, 0);
   const currentBalance = totalIn - totalOut;
+
+  const handleScanNota = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<{base64: string, mimeType: string}>((resolve, reject) => {
+        reader.onload = (ev) => {
+          const result = ev.target?.result as string;
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1024;
+            const MAX_HEIGHT = 1024;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            const split = compressedDataUrl.split(',');
+            const mimeType = 'image/jpeg';
+            const base64 = split[1];
+            resolve({ base64, mimeType });
+          };
+          img.onerror = reject;
+          img.src = result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { base64, mimeType } = await base64Promise;
+
+      const response = await fetch('/api/scan-pettycash', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ base64, mimeType }),
+      });
+
+      if (!response.ok) {
+        let errMsg = 'Gagal scan nota';
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch(err) {}
+        throw new Error(errMsg + ' (Status: ' + response.status + ')');
+      }
+
+      const data = await response.json();
+      if (data.data) {
+        const item = data.data;
+        const amount = Number(item.amount) || 0;
+        const description = item.description || 'Pengeluaran dari Nota';
+        
+        const newItem: PettyCashTransaction = {
+          id: Math.random().toString(36).substr(2, 9),
+          date: new Date().toISOString().split('T')[0],
+          description: description,
+          type: 'out',
+          amount: amount
+        };
+        
+        onUpdate([...transactions, newItem]);
+        alert(`Berhasil scan nota kas kecil: ${description} (Rp ${amount.toLocaleString('id-ID')})`);
+      } else {
+        alert('Tidak ada data yang terdeteksi dari nota ini.');
+      }
+    } catch (error: any) {
+      console.error(error);
+      alert('Error: ' + error.message + '\\n\\nPastikan format file benar dan API key valid.');
+    } finally {
+      setIsScanning(false);
+      e.target.value = '';
+    }
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,12 +301,17 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
              <button 
                 onClick={() => setShowHelp(!showHelp)}
-                className={`p-2.5 rounded-xl transition-colors ${showHelp ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                className={`p-2.5 rounded-xl transition-colors ${showHelp ? 'bg-accent-400 text-brand-950 shadow-lg shadow-accent-400/20' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                 title="Panduan Format Excel"
              >
                 <Info className="w-5 h-5" />
              </button>
-             <label className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg shadow-green-600/20">
+             <label className="flex-1 md:flex-none bg-accent-400 hover:bg-accent-500 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg shadow-accent-400/20">
+                <ImageIcon className="w-4 h-4" />
+                {isScanning ? 'Memproses...' : 'Scan AI'}
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanNota} disabled={isScanning} />
+            </label>
+             <label className="flex-1 md:flex-none bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg shadow-brand-500/20">
                 <Upload className="w-4 h-4" />
                 Import
                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
@@ -242,41 +343,41 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
 
       {/* Format Help Section */}
       {showHelp && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 p-6 rounded-2xl no-print animate-in slide-in-from-top duration-300">
+          <div className="bg-accent-50 dark:bg-accent-900/20 border border-accent-200 dark:border-accent-800/50 p-6 rounded-2xl no-print animate-in slide-in-from-top duration-300">
               <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300">
+                  <div className="flex items-center gap-2 text-brand-900 dark:text-accent-300">
                     <FileSpreadsheet className="w-6 h-6" />
                     <h4 className="font-bold text-lg">Panduan Import Excel (Kas Kecil)</h4>
                   </div>
-                  <button onClick={() => setShowHelp(false)} className="text-blue-400 hover:text-blue-600 p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-full transition-colors"><X className="w-5 h-5"/></button>
+                  <button onClick={() => setShowHelp(false)} className="text-accent-700 hover:text-accent-900 p-1 hover:bg-accent-100 dark:hover:bg-accent-800 rounded-full transition-colors"><X className="w-5 h-5"/></button>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <p className="text-sm text-blue-800 dark:text-blue-400 mb-3 font-medium">
+                    <p className="text-sm text-brand-800 dark:text-accent-300 mb-3 font-medium">
                         Sistem SBM dapat mendeteksi kolom secara otomatis. Pastikan nama kolom di baris pertama Excel Anda mengandung salah satu kata kunci berikut:
                     </p>
                     <ul className="space-y-2">
                         <li className="flex gap-2 text-xs">
-                            <span className="bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded font-bold min-w-[80px]">TANGGAL:</span>
+                            <span className="bg-accent-200 dark:bg-accent-800 px-2 py-0.5 rounded font-bold min-w-[80px] text-brand-950 dark:text-accent-100">TANGGAL:</span>
                             <span className="text-gray-600 dark:text-gray-400 italic">Tanggal, Tgl, Date, Hari</span>
                         </li>
                         <li className="flex gap-2 text-xs">
-                            <span className="bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded font-bold min-w-[80px]">URAIAN:</span>
+                            <span className="bg-accent-200 dark:bg-accent-800 px-2 py-0.5 rounded font-bold min-w-[80px] text-brand-950 dark:text-accent-100">URAIAN:</span>
                             <span className="text-gray-600 dark:text-gray-400 italic">Uraian, Keterangan, Ket, Barang, Nama, Desc</span>
                         </li>
                         <li className="flex gap-2 text-xs">
-                            <span className="bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded font-bold min-w-[80px]">MASUK:</span>
+                            <span className="bg-accent-200 dark:bg-accent-800 px-2 py-0.5 rounded font-bold min-w-[80px] text-brand-950 dark:text-accent-100">MASUK:</span>
                             <span className="text-gray-600 dark:text-gray-400 italic">Masuk, In, Debit, Pemasukan, Setor</span>
                         </li>
                         <li className="flex gap-2 text-xs">
-                            <span className="bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded font-bold min-w-[80px]">KELUAR:</span>
+                            <span className="bg-accent-200 dark:bg-accent-800 px-2 py-0.5 rounded font-bold min-w-[80px] text-brand-950 dark:text-accent-100">KELUAR:</span>
                             <span className="text-gray-600 dark:text-gray-400 italic">Keluar, Out, Credit, Kredit, Bayar</span>
                         </li>
                     </ul>
                   </div>
-                  <div className="bg-white dark:bg-gray-800/50 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                      <div className="flex items-center gap-2 text-amber-600 mb-2">
+                  <div className="bg-white dark:bg-gray-800/50 p-4 rounded-xl border border-accent-200 dark:border-accent-900/30">
+                      <div className="flex items-center gap-2 text-accent-700 dark:text-accent-400 mb-2">
                           <AlertCircle className="w-4 h-4" />
                           <span className="text-xs font-bold uppercase tracking-wider">Tips Agar Terdeteksi:</span>
                       </div>
@@ -289,15 +390,15 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                   </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-4 border-t border-blue-100 dark:border-blue-800">
+              <div className="flex items-center gap-4 pt-4 border-t border-accent-200 dark:border-accent-800">
                   <button 
                     onClick={downloadTemplate}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors"
+                    className="bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-brand-700 transition-colors"
                   >
-                      <Download className="w-4 h-4" />
+                      <Download className="w-4 h-4 text-accent-300" />
                       Download Template Excel
                   </button>
-                  <p className="text-[10px] text-blue-500 dark:text-blue-400 italic">Gunakan template di atas jika Anda masih kesulitan mengimpor file buatan sendiri.</p>
+                  <p className="text-[10px] text-brand-700 dark:text-accent-400 italic">Gunakan template di atas jika Anda masih kesulitan mengimpor file buatan sendiri.</p>
               </div>
           </div>
       )}
@@ -306,7 +407,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
               <div className="flex items-center gap-3 mb-2 text-gray-500 dark:text-gray-400">
-                  <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600">
+                  <div className="p-2 bg-accent-100 dark:bg-accent-900/30 rounded-lg text-accent-700 dark:text-accent-400">
                     <Wallet className="w-5 h-5" />
                   </div>
                   <span className="text-sm font-medium">Saldo Saat Ini</span>
@@ -429,7 +530,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                         <span>{t.date}</span>
                       </div>
                       <p className="font-bold text-gray-900 dark:text-white text-sm">{t.description}</p>
-                      <p className="text-xs font-bold text-blue-600 mt-1">Saldo: {t.balance >= 0 ? '+' : '-'} Rp {Math.abs(t.balance).toLocaleString('id-ID')}</p>
+                      <p className="text-xs font-bold text-brand-700 dark:text-accent-400 mt-1">Saldo: {t.balance >= 0 ? '+' : '-'} Rp {Math.abs(t.balance).toLocaleString('id-ID')}</p>
                   </div>
                   <div className={`text-right ${t.type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
                       <p className="font-bold text-sm">
@@ -456,7 +557,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                       <th className="px-6 py-4 print:px-2 print:py-2">Uraian</th>
                       <th className="px-6 py-4 text-right text-green-600 print:text-black print:px-2 print:py-2">Masuk (Debit)</th>
                       <th className="px-6 py-4 text-right text-red-600 print:text-black print:px-2 print:py-2">Keluar (Kredit)</th>
-                      <th className="px-6 py-4 text-right text-blue-600 print:text-black print:px-2 print:py-2">Saldo</th>
+                      <th className="px-6 py-4 text-right text-brand-700 dark:text-accent-400 print:text-black print:px-2 print:py-2">Saldo</th>
                       <th className="px-6 py-4 text-center no-print">Aksi</th>
                   </tr>
               </thead>
