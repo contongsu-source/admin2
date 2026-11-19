@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { AppState, MaterialItem } from '../types';
-import { Plus, Trash2, Upload, Image as ImageIcon, X, Printer, Calendar, Archive, Download, MapPin, Edit2 } from 'lucide-react';
+import { AppState, MaterialItem, MaterialPayment } from '../types';
+import { Plus, Trash2, Upload, Image as ImageIcon, X, Printer, Calendar, Archive, Download, MapPin, Edit2, Wallet, CheckCircle2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
   ALL_LOCATIONS_FILTER,
@@ -11,14 +11,16 @@ import {
   parseMaterialExcelRow,
 } from '../materialUtils';
 import { triggerPrintWithPdfFallback } from '../pdfUtils';
+import { terbilang } from '../utils';
 
 interface MaterialPageProps {
   state: AppState;
   onUpdate: (materials: MaterialItem[]) => void;
+  onUpdatePayments?: (payments: MaterialPayment[]) => void;
   onChangeView?: (view: string) => void;
 }
 
-export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onChangeView }) => {
+export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onUpdatePayments, onChangeView }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriodId = currentProject?.currentPeriodId || '';
   const currentPeriod = state.periods.find(p => p.id === currentPeriodId);
@@ -403,6 +405,101 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
 
   const visibleItemsCount = visibleGroups.reduce((sum, g) => sum + g.items.length, 0);
   const visibleTotal = visibleGroups.reduce((sum, g) => sum + g.subtotal, 0);
+  const visibleTotalInWords = visibleTotal > 0 ? terbilang(Math.round(visibleTotal)) : 'Nol';
+
+  // --- Material Payment Tracking (Sudah Dibayar & Kurang Bayar) ---
+  const periodPayments: MaterialPayment[] = useMemo(() => {
+    const raw = state.materialPayments?.[currentPeriodId] || [];
+    return [...raw].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [state.materialPayments, currentPeriodId]);
+
+  const visiblePayments = useMemo(() => {
+    if (activeLocationKey === ALL_LOCATIONS_FILTER) {
+      return periodPayments;
+    }
+    return periodPayments.filter(p => getLocationGroupKey(p.location) === activeLocationKey);
+  }, [periodPayments, activeLocationKey]);
+
+  const totalPaid = useMemo(() => {
+    return visiblePayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  }, [visiblePayments]);
+
+  const remainingPayment = visibleTotal - totalPaid;
+  const paidInWords = totalPaid > 0 ? terbilang(Math.round(totalPaid)) : 'Nol';
+  const remainingInWords = remainingPayment > 0 ? terbilang(Math.round(remainingPayment)) : 'Nol';
+  const overpaidInWords = remainingPayment < 0 ? terbilang(Math.round(Math.abs(remainingPayment))) : 'Nol';
+
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [paymentDraft, setPaymentDraft] = useState<{
+    date: string;
+    amount: string;
+    note: string;
+    location: string;
+  }>({
+    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    note: '',
+    location: '',
+  });
+
+  const openAddPaymentForm = (presetAmount?: number, presetNote?: string) => {
+    setEditingPaymentId(null);
+    setPaymentDraft({
+      date: new Date().toISOString().split('T')[0],
+      amount: presetAmount && presetAmount > 0 ? String(presetAmount) : '',
+      note: presetNote || '',
+      location: activeFilterLocationName || '',
+    });
+    setShowPaymentForm(true);
+  };
+
+  const openEditPaymentForm = (payment: MaterialPayment) => {
+    setEditingPaymentId(payment.id);
+    setPaymentDraft({
+      date: payment.date,
+      amount: String(payment.amount),
+      note: payment.note || '',
+      location: payment.location || '',
+    });
+    setShowPaymentForm(true);
+  };
+
+  const handleSavePayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onUpdatePayments) return;
+    const numericAmount = Number(paymentDraft.amount) || 0;
+    if (numericAmount <= 0) {
+      alert('Nominal pembayaran harus lebih dari 0.');
+      return;
+    }
+
+    const cleanLocation = normalizeMaterialLocation(paymentDraft.location);
+    const cleanNote = paymentDraft.note.trim();
+
+    const entry: MaterialPayment = {
+      id: editingPaymentId || `mp${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+      date: paymentDraft.date || new Date().toISOString().split('T')[0],
+      amount: numericAmount,
+    };
+    if (cleanNote) entry.note = cleanNote;
+    if (cleanLocation) entry.location = cleanLocation;
+
+    if (editingPaymentId) {
+      onUpdatePayments(periodPayments.map(p => (p.id === editingPaymentId ? entry : p)));
+    } else {
+      onUpdatePayments([...periodPayments, entry]);
+    }
+    setShowPaymentForm(false);
+    setEditingPaymentId(null);
+  };
+
+  const handleDeletePayment = (paymentId: string) => {
+    if (!onUpdatePayments) return;
+    if (confirm('Hapus catatan pembayaran ini?')) {
+      onUpdatePayments(periodPayments.filter(p => p.id !== paymentId));
+    }
+  };
 
   return (
     <div className="space-y-6 pb-20 md:pb-0">
@@ -475,15 +572,29 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
         </div>
       </div>
 
-      <div ref={materialPrintRef} className="print:bg-white print:text-black">
+      <div ref={materialPrintRef} className="material-print-root print:bg-white print:text-black">
       {/* Print Header */}
-      <div className="hidden print-only mb-6 text-black bg-white">
-          <h1 className="text-2xl font-bold uppercase text-black">{state.companyProfile.name}</h1>
-          <h2 className="text-xl font-bold text-black">Laporan Material Per Tempat Proyek</h2>
-          <p className="text-black">Proyek: {currentProject?.name} {currentPeriod ? `(${currentPeriod.name})` : ''}</p>
-          {activeFilterLocationName && (
-            <p className="font-semibold text-black">Filter Tempat: {activeFilterLocationName}</p>
-          )}
+      <div className="hidden print-only material-print-header text-black bg-white">
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr>
+                <td className="align-bottom text-left p-0">
+                  <div className="text-[13px] font-bold uppercase text-black leading-snug">{state.companyProfile.name}</div>
+                  <div className="text-[11px] font-bold text-black leading-snug">Laporan Material Per Tempat Proyek</div>
+                </td>
+                <td className="align-bottom text-right p-0">
+                  <div className="text-[10px] font-bold text-black leading-snug">
+                    Proyek: {currentProject?.name} {currentPeriod ? `(${currentPeriod.name})` : ''}
+                  </div>
+                  {activeFilterLocationName && (
+                    <div className="text-[10px] font-semibold text-black leading-snug">
+                      Filter Tempat: {activeFilterLocationName}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
       </div>
 
       {/* Add / Edit Form */}
@@ -811,14 +922,17 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
 
           {/* Mobile Grand Summary */}
           <div className="bg-gradient-to-r from-brand-700 to-brand-600 text-white p-5 rounded-2xl shadow-lg shadow-brand-600/30 mt-4 border border-accent-400/40">
-              <div className="flex justify-between items-center">
-                  <div>
+              <div className="flex justify-between items-center gap-3">
+                  <div className="min-w-0">
                     <span className="font-bold text-brand-100 block text-sm">
-                      {activeFilterLocationName ? `Total ${activeFilterLocationName}` : 'Total Semua Tempat'}
+                      {activeFilterLocationName ? `Jumlah Total • ${activeFilterLocationName}` : 'Jumlah Total'}
                     </span>
-                    <span className="text-xs text-brand-100/80">{visibleGroups.length} tempat • {visibleItemsCount} item</span>
+                    <span className="block text-xs italic text-accent-200 mt-0.5">
+                      # {visibleTotalInWords} Rupiah #
+                    </span>
+                    <span className="text-[11px] text-brand-100/80">{visibleGroups.length} tempat • {visibleItemsCount} item</span>
                   </div>
-                  <span className="text-xl font-bold text-accent-300 tabular-nums">Rp {visibleTotal.toLocaleString('id-ID')}</span>
+                  <span className="text-xl font-bold text-accent-300 tabular-nums whitespace-nowrap shrink-0">Rp {visibleTotal.toLocaleString('id-ID')}</span>
               </div>
           </div>
         </div>
@@ -826,27 +940,27 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
 
       {/* DESKTOP & PRINT GROUPED TABLE VIEW */}
       {visibleGroups.length > 0 && (
-        <div className="hidden md:block space-y-6 print:block print:space-y-4 pdf-force-show">
+        <div className="hidden md:block space-y-6 print:block print:space-y-2 pdf-force-show material-print-groups">
           {visibleGroups.map(group => (
             <section
               key={group.key}
-              className="bg-white dark:bg-gray-800 rounded-2xl border border-brand-200/80 dark:border-gray-700 shadow-sm overflow-hidden print:border print:border-black print:rounded-none print:shadow-none print:break-inside-avoid"
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-brand-200/80 dark:border-gray-700 shadow-sm overflow-hidden print:border print:border-black print:rounded-none print:shadow-none material-print-section"
             >
-              {/* Location Section Header */}
-              <div className="bg-brand-50/90 dark:bg-brand-900/25 px-5 py-3.5 border-b border-brand-200 dark:border-gray-700 flex flex-wrap justify-between items-center gap-3 print:bg-gray-100 print:border-black print:py-2 print:px-3">
+              {/* Location Section Header (Screen) */}
+              <div className="no-print bg-brand-50/90 dark:bg-brand-900/25 px-5 py-3.5 border-b border-brand-200 dark:border-gray-700 flex flex-wrap justify-between items-center gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="bg-brand-600 text-accent-300 p-2 rounded-xl shadow-sm no-print">
+                  <div className="bg-brand-600 text-accent-300 p-2 rounded-xl shadow-sm">
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-brand-700 dark:text-accent-400 print:text-black">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-brand-700 dark:text-accent-400">
                       Nama Tempat Proyek
                     </p>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white print:text-black print:text-sm">
+                      <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">
                         {group.locationName}
                       </h3>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-accent-100 text-accent-900 dark:bg-accent-900/40 dark:text-accent-300 print:bg-white print:border print:border-black print:text-black print:text-[10px]">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-accent-100 text-accent-900 dark:bg-accent-900/40 dark:text-accent-300">
                         {group.items.length} item
                       </span>
                     </div>
@@ -854,17 +968,17 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 print:text-black">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                       Subtotal Tempat
                     </span>
-                    <span className="text-base font-bold text-brand-700 dark:text-accent-300 tabular-nums print:text-black print:text-sm">
+                    <span className="text-base font-bold text-brand-700 dark:text-accent-300 tabular-nums">
                       Rp {group.subtotal.toLocaleString('id-ID')}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => openAddForm(group.isDefault ? '' : group.locationName)}
-                    className="no-print bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                    className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
                     title={`Tambah material untuk ${group.locationName}`}
                   >
                     <Plus className="w-3.5 h-3.5 text-accent-300" />
@@ -873,27 +987,33 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
                 </div>
               </div>
 
+              {/* Location Section Header (Print & PDF) */}
+              <div className="hidden print-only material-print-loc-bar">
+                <span className="font-bold text-black">{group.locationName}</span>{' '}
+                <span className="font-normal text-black">({group.items.length} item)</span>
+              </div>
+
               {/* Table for this Location */}
-              <table className="w-full text-sm text-left print:text-xs">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs font-bold print:bg-gray-200 print:text-black">
+              <table className="w-full text-sm text-left material-print-table print:text-[9.5px] print:leading-tight">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs font-bold print:bg-gray-200 print:text-black print:text-[9px]">
                       <tr>
-                          <th className="px-4 py-3.5 w-12 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:py-2">No</th>
-                          <th className="px-4 py-3.5 w-32 border-b border-gray-200 dark:border-gray-700 print:border-black print:py-2">Tanggal</th>
-                          <th className="px-4 py-3.5 border-b border-gray-200 dark:border-gray-700 print:border-black print:py-2">Nama Barang</th>
+                          <th className="px-4 py-3.5 w-12 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:w-7 print:px-1 print:py-1">No</th>
+                          <th className="px-4 py-3.5 w-32 border-b border-gray-200 dark:border-gray-700 print:border-black print:w-[74px] print:px-1.5 print:py-1 print:whitespace-nowrap">Tanggal</th>
+                          <th className="px-4 py-3.5 border-b border-gray-200 dark:border-gray-700 print:border-black print:px-1.5 print:py-1">Nama Barang</th>
                           <th className="px-4 py-3.5 w-20 text-center border-b border-gray-200 dark:border-gray-700 no-print">Bon</th>
-                          <th className="px-4 py-3.5 w-20 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:py-2">Qty</th>
-                          <th className="px-4 py-3.5 w-24 border-b border-gray-200 dark:border-gray-700 print:border-black print:py-2">Satuan</th>
-                          <th className="px-4 py-3.5 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:py-2">Harga</th>
-                          <th className="px-4 py-3.5 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:py-2">Total</th>
+                          <th className="px-4 py-3.5 w-20 text-center border-b border-gray-200 dark:border-gray-700 print:border-black print:w-10 print:px-1 print:py-1 print:whitespace-nowrap">Qty</th>
+                          <th className="px-4 py-3.5 w-24 border-b border-gray-200 dark:border-gray-700 print:border-black print:w-14 print:px-1.5 print:py-1 print:whitespace-nowrap">Satuan</th>
+                          <th className="px-4 py-3.5 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:w-24 print:px-1.5 print:py-1 print:whitespace-nowrap">Harga</th>
+                          <th className="px-4 py-3.5 text-right border-b border-gray-200 dark:border-gray-700 print:border-black print:w-24 print:px-1.5 print:py-1 print:whitespace-nowrap">Total</th>
                           <th className="px-4 py-3.5 w-24 text-center border-b border-gray-200 dark:border-gray-700 no-print">Aksi</th>
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700 print:divide-gray-300">
                       {group.items.map((item, idx) => (
                           <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors print:hover:bg-transparent">
-                              <td className="px-4 py-3 text-center text-gray-500 dark:text-gray-400 print:text-black print:py-1.5">{idx + 1}</td>
-                              <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium print:text-black print:py-1.5">{item.date}</td>
-                              <td className="px-4 py-3 font-bold text-gray-900 dark:text-white print:text-black print:py-1.5">{item.itemName}</td>
+                              <td className="px-4 py-3 text-center text-gray-500 dark:text-gray-400 print:text-black print:px-1 print:py-0.5">{idx + 1}</td>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium print:text-black print:px-1.5 print:py-0.5 print:whitespace-nowrap">{item.date}</td>
+                              <td className="px-4 py-3 font-bold text-gray-900 dark:text-white print:font-semibold print:text-black print:px-1.5 print:py-0.5">{item.itemName}</td>
                               <td className="px-4 py-3 text-center no-print">
                                   {item.receiptImage ? (
                                       <button 
@@ -911,10 +1031,10 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
                                       <span className="text-gray-300 text-xs">-</span>
                                   )}
                               </td>
-                              <td className="px-4 py-3 text-center dark:text-gray-300 tabular-nums print:text-black print:py-1.5">{item.quantity}</td>
-                              <td className="px-4 py-3 text-gray-600 dark:text-gray-300 print:text-black print:py-1.5">{item.unit}</td>
-                              <td className="px-4 py-3 text-right dark:text-gray-300 tabular-nums print:text-black print:py-1.5">Rp {item.unitPrice.toLocaleString('id-ID')}</td>
-                              <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white tabular-nums print:text-black print:py-1.5">Rp {item.totalPrice.toLocaleString('id-ID')}</td>
+                              <td className="px-4 py-3 text-center dark:text-gray-300 tabular-nums print:text-black print:px-1 print:py-0.5 print:whitespace-nowrap">{item.quantity}</td>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-300 print:text-black print:px-1.5 print:py-0.5 print:whitespace-nowrap">{item.unit}</td>
+                              <td className="px-4 py-3 text-right dark:text-gray-300 tabular-nums print:text-black print:px-1.5 print:py-0.5 print:whitespace-nowrap">Rp {item.unitPrice.toLocaleString('id-ID')}</td>
+                              <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white tabular-nums print:text-black print:px-1.5 print:py-0.5 print:whitespace-nowrap">Rp {item.totalPrice.toLocaleString('id-ID')}</td>
                               <td className="px-4 py-3 text-center no-print">
                                   <div className="flex items-center justify-center gap-1">
                                     <button 
@@ -936,12 +1056,13 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
                           </tr>
                       ))}
                   </tbody>
-                  <tfoot className="bg-accent-50/70 dark:bg-gray-700/50 border-t border-brand-100 dark:border-gray-600 print:bg-white print:border-t print:border-black">
+                  <tfoot className="bg-accent-50/70 dark:bg-gray-700/50 border-t border-brand-100 dark:border-gray-600 print:bg-gray-50 print:border-t print:border-black">
                       <tr>
-                          <td colSpan={7} className="px-4 py-3 text-right font-bold text-gray-800 dark:text-gray-200 uppercase text-xs tracking-wide print:text-black">
+                          <td colSpan={6} className="px-4 py-3 text-right font-bold text-gray-800 dark:text-gray-200 uppercase text-xs tracking-wide print:text-black print:text-[9.5px] print:px-1.5 print:py-1">
                             Subtotal {group.locationName}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-brand-700 dark:text-accent-300 tabular-nums print:text-black">
+                          <td className="no-print"></td>
+                          <td className="px-4 py-3 text-right font-bold text-brand-700 dark:text-accent-300 tabular-nums print:text-black print:text-[9.5px] print:px-1.5 print:py-1 print:whitespace-nowrap">
                               Rp {group.subtotal.toLocaleString('id-ID')}
                           </td>
                           <td className="no-print"></td>
@@ -951,35 +1072,389 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
             </section>
           ))}
 
-          {/* Grand Total Bar */}
-          <div className="bg-gradient-to-r from-brand-800 to-brand-600 dark:from-brand-950 dark:to-brand-800 text-white rounded-2xl px-6 py-4 shadow-md border border-accent-400/30 flex items-center justify-between print:bg-white print:bg-none print:text-black print:border-2 print:border-black print:rounded-none print:shadow-none">
+          {/* Grand Total Bar (Screen) */}
+          <div className="no-print bg-gradient-to-r from-brand-800 to-brand-600 dark:from-brand-950 dark:to-brand-800 text-white rounded-2xl px-6 py-4 shadow-md border border-accent-400/30 flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-bold uppercase tracking-wide">
-                {activeFilterLocationName ? `Total Tempat: ${activeFilterLocationName}` : 'Total Seluruh Tempat Proyek'}
-              </p>
-              <p className="text-xs text-brand-100 print:text-black">
-                {visibleGroups.length} tempat proyek • {visibleItemsCount} item material
+              <div className="flex flex-wrap items-baseline gap-2">
+                <p className="text-sm font-bold uppercase tracking-wide">
+                  {activeFilterLocationName ? `Jumlah Total • ${activeFilterLocationName}` : 'Jumlah Total'}
+                </p>
+                <p className="text-xs italic text-accent-200">
+                  (# {visibleTotalInWords} Rupiah #)
+                </p>
+              </div>
+              <p className="text-xs text-brand-100 mt-0.5">
+                {activeFilterLocationName ? activeFilterLocationName : 'Seluruh Tempat Proyek'} • {visibleGroups.length} tempat • {visibleItemsCount} item
               </p>
             </div>
-            <p className="text-xl md:text-2xl font-bold text-accent-300 tabular-nums print:text-black">
+            <p className="text-xl md:text-2xl font-bold text-accent-300 tabular-nums whitespace-nowrap shrink-0">
               Rp {visibleTotal.toLocaleString('id-ID')}
             </p>
+          </div>
+
+          {/* Grand Total Bar (Print & PDF) */}
+          <div className="hidden print-only material-print-grandtotal-print">
+            <table className="w-full border-collapse">
+              <tbody>
+                <tr>
+                  <td className="text-left align-middle">
+                    <span className="text-[10.5px] font-bold uppercase text-black">Jumlah Total</span>{' '}
+                    <span className="text-[9.5px] italic font-medium text-black">
+                      (Terbilang: # {visibleTotalInWords} Rupiah #)
+                    </span>{' '}
+                    <span className="text-[9px] font-normal text-black">
+                      • {activeFilterLocationName || 'Seluruh Tempat Proyek'} • {visibleGroups.length} tempat • {visibleItemsCount} item
+                    </span>
+                  </td>
+                  <td className="text-right align-middle whitespace-nowrap">
+                    <span className="text-[11px] font-bold text-black tabular-nums whitespace-nowrap">
+                      Rp {visibleTotal.toLocaleString('id-ID')}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="text-left align-middle">
+                    <span className="text-[10px] font-bold uppercase text-black">Sudah Dibayar</span>{' '}
+                    <span className="text-[9px] text-black">
+                      {visiblePayments.length > 0
+                        ? `(${visiblePayments.length}x pembayaran${totalPaid > 0 ? ` • Terbilang: # ${paidInWords} Rupiah #` : ''})`
+                        : '(Belum ada pembayaran)'}
+                    </span>
+                  </td>
+                  <td className="text-right align-middle whitespace-nowrap">
+                    <span className="text-[10.5px] font-bold text-black tabular-nums whitespace-nowrap">
+                      Rp {totalPaid.toLocaleString('id-ID')}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="text-left align-middle">
+                    {remainingPayment > 0 ? (
+                      <>
+                        <span className="text-[10px] font-bold uppercase text-black">Kurang Bayar</span>{' '}
+                        <span className="text-[9px] italic text-black">
+                          (Terbilang: # {remainingInWords} Rupiah #)
+                        </span>
+                      </>
+                    ) : remainingPayment < 0 ? (
+                      <>
+                        <span className="text-[10px] font-bold uppercase text-black">Lebih Bayar (Lunas)</span>{' '}
+                        <span className="text-[9px] italic text-black">
+                          (Terbilang: # {overpaidInWords} Rupiah #)
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[10px] font-bold uppercase text-black">Kurang Bayar</span>{' '}
+                        <span className="text-[9px] font-bold text-black">
+                          {visibleTotal > 0 ? '(Status: LUNAS)' : '(-)'}
+                        </span>
+                      </>
+                    )}
+                  </td>
+                  <td className="text-right align-middle whitespace-nowrap">
+                    <span className="text-[10.5px] font-bold text-black tabular-nums whitespace-nowrap">
+                      Rp {(remainingPayment < 0 ? Math.abs(remainingPayment) : Math.max(0, remainingPayment)).toLocaleString('id-ID')}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      <div className="hidden print-only-flex mt-12 justify-end text-black">
-         <div className="text-center w-48">
-            <p className="mb-2">Mengetahui,</p>
+      <div className="hidden print-only mt-3 text-right text-black break-inside-avoid material-print-signature">
+         <div className="inline-block text-center w-44 text-[10px] leading-snug">
+            <p className="mb-1">Mengetahui,</p>
             {state.companyProfile.signature ? (
-                <img src={state.companyProfile.signature} alt="Tanda Tangan" className="h-32 mx-auto mb-2" />
+                <img src={state.companyProfile.signature} alt="Tanda Tangan" className="h-14 mx-auto mb-1 object-contain" />
             ) : (
-                <div className="h-32" />
+                <div className="h-14" />
             )}
             <p className="font-bold underline">{state.companyProfile.director}</p>
          </div>
       </div>
       </div>
+
+      {/* PAYMENT TRACKING SECTION (Screen Only — Mobile & Desktop) */}
+      {(materials.length > 0 || periodPayments.length > 0) && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-brand-200/80 dark:border-gray-700 shadow-sm p-4 md:p-6 space-y-4 no-print">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-accent-300 p-2.5 rounded-xl">
+                <Wallet className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">
+                  Status Pembayaran Material
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {activeFilterLocationName
+                    ? `Ringkasan pembayaran khusus ${activeFilterLocationName}`
+                    : 'Catat pembayaran bertahap untuk mengetahui sisa kurang bayar'}
+                </p>
+              </div>
+            </div>
+            {onUpdatePayments && (
+              <div className="flex flex-wrap items-center gap-2">
+                {remainingPayment > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => openAddPaymentForm(remainingPayment, 'Pelunasan Material')}
+                    className="bg-accent-400 hover:bg-accent-500 text-brand-950 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Lunasi Sisa</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => openAddPaymentForm()}
+                  className="bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <Plus className="w-4 h-4 text-accent-300" />
+                  <span>Catat Pembayaran</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 3 Summary Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Jumlah Total
+              </p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white tabular-nums mt-1">
+                Rp {visibleTotal.toLocaleString('id-ID')}
+              </p>
+              <p className="text-[11px] italic text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                # {visibleTotalInWords} Rupiah #
+              </p>
+            </div>
+
+            <div className="bg-emerald-50/70 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/60 rounded-xl p-3.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                Sudah Dibayar
+              </p>
+              <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300 tabular-nums mt-1">
+                Rp {totalPaid.toLocaleString('id-ID')}
+              </p>
+              <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">
+                {visiblePayments.length}x pembayaran tercatat
+              </p>
+            </div>
+
+            <div
+              className={`rounded-xl p-3.5 border ${
+                remainingPayment > 0
+                  ? 'bg-amber-50/80 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/60'
+                  : 'bg-brand-50/80 dark:bg-brand-900/25 border-brand-200 dark:border-brand-800/60'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p
+                  className={`text-[11px] font-bold uppercase tracking-wider ${
+                    remainingPayment > 0
+                      ? 'text-amber-700 dark:text-amber-400'
+                      : 'text-brand-700 dark:text-brand-300'
+                  }`}
+                >
+                  {remainingPayment < 0 ? 'Lebih Bayar' : 'Kurang Bayar'}
+                </p>
+                {remainingPayment <= 0 && visibleTotal > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white">
+                    LUNAS
+                  </span>
+                )}
+              </div>
+              <p
+                className={`text-lg font-bold tabular-nums mt-1 ${
+                  remainingPayment > 0
+                    ? 'text-amber-700 dark:text-amber-300'
+                    : 'text-brand-700 dark:text-accent-300'
+                }`}
+              >
+                Rp {(remainingPayment < 0 ? Math.abs(remainingPayment) : Math.max(0, remainingPayment)).toLocaleString('id-ID')}
+              </p>
+              <p
+                className={`text-[11px] italic mt-0.5 line-clamp-1 ${
+                  remainingPayment > 0
+                    ? 'text-amber-700/80 dark:text-amber-300/80'
+                    : 'text-brand-700/80 dark:text-brand-300/80'
+                }`}
+              >
+                {remainingPayment > 0
+                  ? `# ${remainingInWords} Rupiah #`
+                  : remainingPayment < 0
+                    ? `# ${overpaidInWords} Rupiah #`
+                    : visibleTotal > 0
+                      ? 'Pembayaran sudah lunas'
+                      : 'Belum ada tagihan'}
+              </p>
+            </div>
+          </div>
+
+          {/* Add / Edit Payment Form */}
+          {showPaymentForm && onUpdatePayments && (
+            <form
+              onSubmit={handleSavePayment}
+              className="bg-brand-50/60 dark:bg-gray-900/50 border border-brand-200 dark:border-gray-700 rounded-xl p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {editingPaymentId ? 'Edit Pembayaran Material' : 'Input Pembayaran Material'}
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentForm(false);
+                    setEditingPaymentId(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
+                  aria-label="Tutup form pembayaran"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-gray-600 dark:text-gray-300 mb-1">
+                    Tanggal Bayar
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentDraft.date}
+                    onChange={e => setPaymentDraft(prev => ({ ...prev, date: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-gray-600 dark:text-gray-300 mb-1">
+                    Sudah Dibayar (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    placeholder="Contoh: 200000"
+                    value={paymentDraft.amount}
+                    onChange={e => setPaymentDraft(prev => ({ ...prev, amount: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-gray-600 dark:text-gray-300 mb-1">
+                    Tempat Proyek (Opsional)
+                  </label>
+                  <select
+                    value={paymentDraft.location}
+                    onChange={e => setPaymentDraft(prev => ({ ...prev, location: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    <option value="">Umum / Semua Tempat</option>
+                    {knownLocations.map(loc => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-gray-600 dark:text-gray-300 mb-1">
+                    Keterangan (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="DP / Transfer / Tunai"
+                    value={paymentDraft.note}
+                    onChange={e => setPaymentDraft(prev => ({ ...prev, note: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentForm(false);
+                    setEditingPaymentId(null);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200/70 dark:hover:bg-gray-700 rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-sm"
+                >
+                  {editingPaymentId ? 'Simpan Perubahan' : 'Simpan Pembayaran'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Payment History List */}
+          {visiblePayments.length > 0 && (
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+              <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                Riwayat Pembayaran ({visiblePayments.length})
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {visiblePayments.map(payment => (
+                  <div
+                    key={payment.id}
+                    className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
+                          {payment.date}
+                        </span>
+                        <span className="font-semibold text-gray-900 dark:text-white truncate">
+                          {payment.note || 'Pembayaran Material'}
+                        </span>
+                        {payment.location && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand-50 dark:bg-brand-900/40 text-brand-700 dark:text-accent-300 border border-brand-200 dark:border-brand-800">
+                            {payment.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-bold text-emerald-700 dark:text-emerald-300 tabular-nums whitespace-nowrap">
+                        Rp {payment.amount.toLocaleString('id-ID')}
+                      </span>
+                      {onUpdatePayments && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openEditPaymentForm(payment)}
+                            className="p-1.5 text-brand-700 dark:text-accent-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg"
+                            title="Edit pembayaran"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePayment(payment.id)}
+                            className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                            title="Hapus pembayaran"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

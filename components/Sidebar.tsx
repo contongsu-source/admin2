@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, com
         
         <div className="p-6 border-t border-brand-100 dark:border-brand-900/60 bg-brand-50/40 dark:bg-brand-950/40">
           <div className="bg-gradient-to-br from-brand-50 to-accent-50 dark:from-brand-900/40 dark:to-accent-900/20 border border-brand-200/70 dark:border-brand-800/60 rounded-xl p-4 text-center no-print">
-              <p className="text-xs font-bold text-brand-800 dark:text-accent-300 mb-1">SBM System V1.3</p>
+              <p className="text-xs font-bold text-brand-800 dark:text-accent-300 mb-1">TK</p>
               <p className="text-[10px] text-brand-700/75 dark:text-brand-300/70">&copy; 2026 Cloud Sync Enabled</p>
           </div>
         </div>
