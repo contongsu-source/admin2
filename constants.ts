@@ -127,6 +127,7 @@ export const INITIAL_STATE: AppState = {
   employees: INITIAL_EMPLOYEES,
   attendance: INITIAL_ATTENDANCE,
   materials: INITIAL_MATERIALS,
+  materialPayments: {},
   pettyCash: INITIAL_PETTY_CASH,
   incomingFunds: { 'p1': [], 'p2': [] },
   rab: { 'p1': [], 'p2': [] },

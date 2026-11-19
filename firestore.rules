@@ -41,6 +41,7 @@ service cloud.firestore {
              data.employees is list &&
              data.attendance is map &&
              data.materials is map &&
+             (!("materialPayments" in data) || data.materialPayments is map) &&
              (!("pettyCash" in data) || data.pettyCash is map) &&
              (!("incomingFunds" in data) || data.incomingFunds is map) &&
              (!("rab" in data) || data.rab is map) &&

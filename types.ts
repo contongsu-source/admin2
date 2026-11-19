@@ -49,6 +49,14 @@ export interface MaterialItem {
   receiptImage?: string; // Base64 or URL string
 }
 
+export interface MaterialPayment {
+  id: string;
+  date: string;
+  amount: number;
+  note?: string;
+  location?: string; // Opsional: tempat proyek terkait
+}
+
 export interface PettyCashTransaction {
   id: string;
   date: string;
@@ -107,6 +115,7 @@ export interface AppState {
   employees: Employee[];
   attendance: Record<string, AttendanceRecord[]>; // Keyed by Period ID
   materials: Record<string, MaterialItem[]>; // Keyed by Period ID
+  materialPayments?: Record<string, MaterialPayment[]>; // Keyed by Period ID
   pettyCash: Record<string, PettyCashTransaction[]>; // Keyed by Project ID
   incomingFunds: Record<string, IncomingFund[]>; // Keyed by Project ID
   rab: Record<string, RABItem[]>; // Keyed by Project ID
@@ -127,6 +136,20 @@ export const prepareStateForSync = (state: AppState): AppState => {
       }
       return cleanItem as MaterialItem;
     });
+  }
+  if (state.materialPayments) {
+    syncState.materialPayments = {};
+    for (const periodId in state.materialPayments) {
+      syncState.materialPayments[periodId] = (state.materialPayments[periodId] || []).map(p => {
+        const cleanPayment: Record<string, any> = {};
+        for (const [k, v] of Object.entries(p)) {
+          if (v !== undefined) {
+            cleanPayment[k] = v;
+          }
+        }
+        return cleanPayment as MaterialPayment;
+      });
+    }
   }
   return syncState;
 };

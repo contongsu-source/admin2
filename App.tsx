@@ -10,7 +10,7 @@ import { PettyCashPage } from './components/PettyCashPage';
 import { RABPage } from './components/RABPage';
 import { ConsolidatedReport } from './components/ConsolidatedReport';
 import { ProjectSummaryPage } from './components/ProjectSummaryPage';
-import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, RABItem, prepareStateForSync } from './types';
+import { AppState, AttendanceRecord, MaterialItem, MaterialPayment, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, RABItem, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
 import { deepEqual } from './utils';
 import { Cloud, CheckCircle2, AlertCircle, LogIn, X } from 'lucide-react';
@@ -126,6 +126,7 @@ const App: React.FC = () => {
         if (!parsed.employees) parsed.employees = [];
         if (!parsed.attendance) parsed.attendance = {};
         if (!parsed.materials) parsed.materials = {};
+        if (!parsed.materialPayments) parsed.materialPayments = {};
         if (!parsed.pettyCash) parsed.pettyCash = {};
         if (!parsed.rab) parsed.rab = {};
 
@@ -271,6 +272,7 @@ const App: React.FC = () => {
                   if (!data.employees) data.employees = [];
                   if (!data.attendance) data.attendance = {};
                   if (!data.materials) data.materials = {};
+                  if (!data.materialPayments) data.materialPayments = {};
                   if (!data.pettyCash) data.pettyCash = {};
                   
                   // MIGRATION: Assign missing projectId to employees based on their first found attendance record
@@ -410,6 +412,20 @@ const App: React.FC = () => {
       materials: {
         ...prev.materials,
         ...updates
+      }
+    }));
+  };
+
+  const handleUpdateMaterialPayments = (newPayments: MaterialPayment[]) => {
+    const project = state.projects.find(p => p.id === state.currentProjectId);
+    if (!project) return;
+    const currentPeriodId = project.currentPeriodId;
+
+    setState(prev => ({
+      ...prev,
+      materialPayments: {
+        ...(prev.materialPayments || {}),
+        [currentPeriodId]: newPayments
       }
     }));
   };
@@ -771,7 +787,8 @@ const App: React.FC = () => {
       case 'materials':
         return <MaterialPage 
             state={state} 
-            onUpdate={handleUpdateMaterials} 
+            onUpdate={handleUpdateMaterials}
+            onUpdatePayments={handleUpdateMaterialPayments}
             onChangeView={setCurrentView}
         />;
       case 'petty_cash':

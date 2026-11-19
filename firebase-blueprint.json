@@ -11,6 +11,7 @@
         "employees": { "type": "array" },
         "attendance": { "type": "object" },
         "materials": { "type": "object" },
+        "materialPayments": { "type": "object" },
         "pettyCash": { "type": "object" },
         "incomingFunds": { "type": "object" },
         "rab": { "type": "object" },

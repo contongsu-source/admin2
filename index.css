@@ -124,3 +124,150 @@ html.pdf-capturing .pdf-force-show {
 html.pdf-capturing .overflow-x-auto {
   overflow: visible !important;
 }
+
+@media print {
+  .material-print-root .material-print-header {
+    margin-bottom: 8px !important;
+    padding-bottom: 4px !important;
+    border-bottom: 1.5px solid #000000 !important;
+  }
+  .material-print-root .material-print-groups {
+    display: block !important;
+  }
+  .material-print-root .material-print-groups > * + * {
+    margin-top: 6px !important;
+  }
+  .material-print-root .material-print-section {
+    border: 1px solid #000000 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+  .material-print-root .material-print-loc-bar {
+    padding: 4px 6px !important;
+    background: #f3f4f6 !important;
+    border-bottom: 1px solid #000000 !important;
+    font-size: 10.5px !important;
+    line-height: 1.35 !important;
+    color: #000000 !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+  .material-print-root .material-print-table {
+    font-size: 9.5px !important;
+    line-height: 1.25 !important;
+  }
+  .material-print-root .material-print-table thead th {
+    padding: 3px 5px !important;
+    font-size: 9px !important;
+    background: #e5e7eb !important;
+    color: #000000 !important;
+    border-bottom: 1px solid #000000 !important;
+  }
+  .material-print-root .material-print-table tbody td {
+    padding: 2.5px 5px !important;
+    color: #000000 !important;
+    border-bottom: 0.5px solid #d1d5db !important;
+    vertical-align: top !important;
+  }
+  .material-print-root .material-print-table tfoot td {
+    padding: 3px 5px !important;
+    font-size: 9.5px !important;
+    color: #000000 !important;
+    background: #f9fafb !important;
+    border-top: 1px solid #000000 !important;
+  }
+  .material-print-root .material-print-grandtotal-print {
+    margin-top: 8px !important;
+    background: #f3f4f6 !important;
+    color: #000000 !important;
+    border: 1.5px solid #000000 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .material-print-root .material-print-grandtotal-print td {
+    padding: 4px 8px !important;
+    line-height: 1.3 !important;
+  }
+  .material-print-root .material-print-grandtotal-print tr + tr td {
+    border-top: 0.5px solid #9ca3af !important;
+  }
+  .material-print-root .material-print-signature {
+    margin-top: 10px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+
+html.pdf-capturing .material-print-root {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+html.pdf-capturing .material-print-root .material-print-header {
+  margin-bottom: 8px !important;
+  padding-bottom: 4px !important;
+  border-bottom: 1.5px solid #000000 !important;
+}
+html.pdf-capturing .material-print-root .material-print-groups {
+  display: block !important;
+}
+html.pdf-capturing .material-print-root .material-print-groups > * + * {
+  margin-top: 6px !important;
+}
+html.pdf-capturing .material-print-root .material-print-section {
+  border: 1px solid #000000 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #ffffff !important;
+}
+html.pdf-capturing .material-print-root .material-print-loc-bar {
+  padding: 4px 6px !important;
+  background: #f3f4f6 !important;
+  border-bottom: 1px solid #000000 !important;
+  font-size: 10.5px !important;
+  line-height: 1.35 !important;
+  color: #000000 !important;
+}
+html.pdf-capturing .material-print-root .material-print-table {
+  font-size: 9.5px !important;
+  line-height: 1.25 !important;
+}
+html.pdf-capturing .material-print-root .material-print-table thead th {
+  padding: 3px 5px !important;
+  font-size: 9px !important;
+  background: #e5e7eb !important;
+  color: #000000 !important;
+  border-bottom: 1px solid #000000 !important;
+}
+html.pdf-capturing .material-print-root .material-print-table tbody td {
+  padding: 2.5px 5px !important;
+  color: #000000 !important;
+  border-bottom: 0.5px solid #d1d5db !important;
+  vertical-align: top !important;
+}
+html.pdf-capturing .material-print-root .material-print-table tfoot td {
+  padding: 3px 5px !important;
+  font-size: 9.5px !important;
+  color: #000000 !important;
+  background: #f9fafb !important;
+  border-top: 1px solid #000000 !important;
+}
+html.pdf-capturing .material-print-root .material-print-grandtotal-print {
+  margin-top: 8px !important;
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+  border: 1.5px solid #000000 !important;
+}
+html.pdf-capturing .material-print-root .material-print-grandtotal-print td {
+  padding: 4px 8px !important;
+  line-height: 1.3 !important;
+}
+html.pdf-capturing .material-print-root .material-print-grandtotal-print tr + tr td {
+  border-top: 0.5px solid #9ca3af !important;
+}
+html.pdf-capturing .material-print-root .material-print-signature {
+  margin-top: 10px !important;
+}
+
