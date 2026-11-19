@@ -17,6 +17,9 @@ service cloud.firestore {
     //   - materials: map
     //   - pettyCash: map
     //   - incomingFunds: map
+    //   - rab: map
+    //   - contracts: map
+    //   - billings: map
     //   - currentProjectId: string
     //
     // ===============================================================
@@ -45,6 +48,8 @@ service cloud.firestore {
              (!("pettyCash" in data) || data.pettyCash is map) &&
              (!("incomingFunds" in data) || data.incomingFunds is map) &&
              (!("rab" in data) || data.rab is map) &&
+             (!("contracts" in data) || data.contracts is map) &&
+             (!("billings" in data) || data.billings is map) &&
              data.currentProjectId is string;
     }
 

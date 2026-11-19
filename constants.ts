@@ -131,5 +131,7 @@ export const INITIAL_STATE: AppState = {
   pettyCash: INITIAL_PETTY_CASH,
   incomingFunds: { 'p1': [], 'p2': [] },
   rab: { 'p1': [], 'p2': [] },
+  contracts: {},
+  billings: {},
   currentProjectId: 'p1',
 };

@@ -10,7 +10,8 @@ import { PettyCashPage } from './components/PettyCashPage';
 import { RABPage } from './components/RABPage';
 import { ConsolidatedReport } from './components/ConsolidatedReport';
 import { ProjectSummaryPage } from './components/ProjectSummaryPage';
-import { AppState, AttendanceRecord, MaterialItem, MaterialPayment, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, RABItem, prepareStateForSync } from './types';
+import { FinanceBillingPage } from './components/FinanceBillingPage';
+import { AppState, AttendanceRecord, MaterialItem, MaterialPayment, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, RABItem, ProjectContract, BillingTerm, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
 import { deepEqual } from './utils';
 import { Cloud, CheckCircle2, AlertCircle, LogIn, X } from 'lucide-react';
@@ -129,6 +130,8 @@ const App: React.FC = () => {
         if (!parsed.materialPayments) parsed.materialPayments = {};
         if (!parsed.pettyCash) parsed.pettyCash = {};
         if (!parsed.rab) parsed.rab = {};
+        if (!parsed.contracts) parsed.contracts = {};
+        if (!parsed.billings) parsed.billings = {};
 
         // MIGRATION: Assign missing projectId to employees based on their first found attendance record
         let needsUpdate = false;
@@ -274,6 +277,8 @@ const App: React.FC = () => {
                   if (!data.materials) data.materials = {};
                   if (!data.materialPayments) data.materialPayments = {};
                   if (!data.pettyCash) data.pettyCash = {};
+                  if (!data.contracts) data.contracts = {};
+                  if (!data.billings) data.billings = {};
                   
                   // MIGRATION: Assign missing projectId to employees based on their first found attendance record
                   let needsUpdate = false;
@@ -456,6 +461,26 @@ const App: React.FC = () => {
           incomingFunds: {
               ...prev.incomingFunds,
               [projectId]: funds
+          }
+      }));
+  };
+
+  const handleUpdateContract = (projectId: string, contract: ProjectContract) => {
+      setState(prev => ({
+          ...prev,
+          contracts: {
+              ...(prev.contracts || {}),
+              [projectId]: contract
+          }
+      }));
+  };
+
+  const handleUpdateBillings = (projectId: string, billings: BillingTerm[]) => {
+      setState(prev => ({
+          ...prev,
+          billings: {
+              ...(prev.billings || {}),
+              [projectId]: billings
           }
       }));
   };
@@ -751,6 +776,7 @@ const App: React.FC = () => {
         materials: { ...prev.materials, [newProjectId]: [] },
         pettyCash: { ...prev.pettyCash, [newProjectId]: [] },
         rab: { ...prev.rab, [newProjectId]: [] },
+        billings: { ...(prev.billings || {}), [newProjectId]: [] },
         currentProjectId: newProjectId 
     }));
   };
@@ -795,6 +821,14 @@ const App: React.FC = () => {
         return <PettyCashPage state={state} onUpdate={handleUpdatePettyCash} />;
       case 'rab':
         return <RABPage state={state} onUpdate={handleUpdateRAB} />;
+      case 'finance_billing':
+        return <FinanceBillingPage
+            state={state}
+            onUpdateContract={handleUpdateContract}
+            onUpdateBillings={handleUpdateBillings}
+            onUpdateIncomingFunds={handleUpdateIncomingFunds}
+            onChangeView={setCurrentView}
+        />;
       case 'invoice':
         return <InvoicePage state={state} onChangeView={setCurrentView} />;
       case 'consolidated_report':

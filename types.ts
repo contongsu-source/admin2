@@ -108,6 +108,63 @@ export interface RABItem {
   category?: string;
 }
 
+export interface ContractAddendum {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  amountDelta: number;
+  newEndDate?: string;
+  notes?: string;
+}
+
+export interface ProjectContract {
+  id: string;
+  projectId: string;
+  contractNumber: string;
+  title: string;
+  clientName: string;
+  contractValue: number;
+  ppnPercent: number;
+  retentionPercent: number;
+  pphPercent: number;
+  downPaymentPercent: number;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  status: 'Draft' | 'Aktif' | 'Addendum' | 'Selesai';
+  notes?: string;
+  addendums?: ContractAddendum[];
+}
+
+export interface BillingPaymentRecord {
+  id: string;
+  date: string; // YYYY-MM-DD
+  amount: number;
+  method?: string;
+  reference?: string;
+  note?: string;
+}
+
+export type BillingStatus = 'Draft' | 'Terkirim' | 'Sebagian' | 'Lunas' | 'Jatuh Tempo';
+
+export interface BillingTerm {
+  id: string;
+  projectId: string;
+  invoiceNumber: string;
+  termName: string;
+  progressPercent: number;
+  grossAmount: number;
+  ppnAmount: number;
+  retentionAmount: number;
+  taxAmount: number;
+  netAmount: number;
+  paidAmount: number;
+  issueDate: string; // YYYY-MM-DD
+  dueDate: string; // YYYY-MM-DD
+  status: BillingStatus;
+  payments?: BillingPaymentRecord[];
+  notes?: string;
+}
+
 export interface AppState {
   companyProfile: CompanyProfile;
   projects: Project[];
@@ -119,8 +176,20 @@ export interface AppState {
   pettyCash: Record<string, PettyCashTransaction[]>; // Keyed by Project ID
   incomingFunds: Record<string, IncomingFund[]>; // Keyed by Project ID
   rab: Record<string, RABItem[]>; // Keyed by Project ID
+  contracts?: Record<string, ProjectContract>; // Keyed by Project ID
+  billings?: Record<string, BillingTerm[]>; // Keyed by Project ID
   currentProjectId: string;
 }
+
+const stripUndefined = <T extends Record<string, any>>(obj: T): T => {
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) {
+      clean[k] = v;
+    }
+  }
+  return clean as T;
+};
 
 export const prepareStateForSync = (state: AppState): AppState => {
   const syncState = { ...state };
@@ -128,27 +197,38 @@ export const prepareStateForSync = (state: AppState): AppState => {
   for (const periodId in state.materials) {
     syncState.materials[periodId] = state.materials[periodId].map(item => {
       const { receiptImage, ...rest } = item;
-      const cleanItem: Record<string, any> = {};
-      for (const [k, v] of Object.entries(rest)) {
-        if (v !== undefined) {
-          cleanItem[k] = v;
-        }
-      }
-      return cleanItem as MaterialItem;
+      return stripUndefined(rest) as MaterialItem;
     });
   }
   if (state.materialPayments) {
     syncState.materialPayments = {};
     for (const periodId in state.materialPayments) {
-      syncState.materialPayments[periodId] = (state.materialPayments[periodId] || []).map(p => {
-        const cleanPayment: Record<string, any> = {};
-        for (const [k, v] of Object.entries(p)) {
-          if (v !== undefined) {
-            cleanPayment[k] = v;
-          }
-        }
-        return cleanPayment as MaterialPayment;
+      syncState.materialPayments[periodId] = (state.materialPayments[periodId] || []).map(p =>
+        stripUndefined(p) as MaterialPayment
+      );
+    }
+  }
+  if (state.contracts) {
+    syncState.contracts = {};
+    for (const projectId in state.contracts) {
+      const contract = state.contracts[projectId];
+      if (!contract) continue;
+      const cleanContract = stripUndefined({
+        ...contract,
+        addendums: contract.addendums ? contract.addendums.map(a => stripUndefined(a)) : undefined,
       });
+      syncState.contracts[projectId] = cleanContract;
+    }
+  }
+  if (state.billings) {
+    syncState.billings = {};
+    for (const projectId in state.billings) {
+      syncState.billings[projectId] = (state.billings[projectId] || []).map(b =>
+        stripUndefined({
+          ...b,
+          payments: b.payments ? b.payments.map(p => stripUndefined(p)) : undefined,
+        })
+      );
     }
   }
   return syncState;
