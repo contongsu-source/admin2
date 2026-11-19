@@ -134,6 +134,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ state, onChangeView }) => 
             {onChangeView && (
               <>
                 <button
+                  onClick={() => onChangeView('finance_billing')}
+                  className="bg-white dark:bg-[#132018] hover:bg-brand-50 dark:hover:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 text-xs md:text-sm font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                  title="Kelola Keuangan, Kontrak & Penagihan"
+                >
+                  <span>Keuangan &amp; Tagihan</span>
+                </button>
+                <button
                   onClick={() => onChangeView('project_summary')}
                   className="bg-brand-600 hover:bg-brand-700 text-white text-xs md:text-sm font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
                   title="Tandai & gabungkan total gaji dan material dari beberapa proyek"
