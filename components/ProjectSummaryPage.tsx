@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AppState, DailyAttendance } from '../types';
 import {
   CheckSquare,
@@ -15,9 +15,11 @@ import {
   X,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  FileDown
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface ProjectSummaryPageProps {
   state: AppState;
@@ -258,8 +260,32 @@ export const ProjectSummaryPage: React.FC<ProjectSummaryPageProps> = ({ state })
     setSelectedIds(ids);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const summaryPrintRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPdf = async () => {
+    if (!summaryPrintRef.current || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadElementAsPdf(summaryPrintRef.current, {
+        filename: 'Rekap_Gabungan_Proyek',
+        paperSize: 'A4-portrait',
+      });
+    } catch (err) {
+      console.error('Gagal export PDF rekap proyek:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    await triggerPrintWithPdfFallback({
+      getElement: () => summaryPrintRef.current,
+      pdfOptions: {
+        filename: 'Rekap_Gabungan_Proyek',
+        paperSize: 'A4-portrait',
+      },
+    });
   };
 
   const handleExportExcel = () => {
@@ -383,8 +409,19 @@ export const ProjectSummaryPage: React.FC<ProjectSummaryPageProps> = ({ state })
 
           <button
             type="button"
+            onClick={handleDownloadPdf}
+            disabled={isExportingPdf}
+            className="bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            title="Download PDF rekap proyek yang ditandai"
+          >
+            <FileDown className="w-4 h-4" />
+            <span>{isExportingPdf ? 'PDF...' : 'Download PDF'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handlePrint}
-            className="bg-accent-400 hover:bg-accent-500 text-brand-950 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            className="bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
             title="Cetak rekap proyek yang ditandai"
           >
             <Printer className="w-4 h-4" />
@@ -870,7 +907,7 @@ export const ProjectSummaryPage: React.FC<ProjectSummaryPageProps> = ({ state })
       </div>
 
       {/* PRINT LAYOUT (Visible only on print) */}
-      <div className="hidden print-only text-black bg-white">
+      <div ref={summaryPrintRef} className="hidden print-only text-black bg-white p-4">
         <div className="border-b-2 border-black pb-4 mb-5 flex justify-between items-end">
           <div>
             <h1 className="text-xl font-bold uppercase">{state.companyProfile.name}</h1>

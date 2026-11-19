@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { AppState, MaterialItem } from '../types';
-import { Plus, Trash2, Upload, Image as ImageIcon, X, Printer, Calendar, Archive, Download, MapPin, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Upload, Image as ImageIcon, X, Printer, Calendar, Archive, Download, MapPin, Edit2, FileDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
   ALL_LOCATIONS_FILTER,
@@ -10,6 +10,7 @@ import {
   normalizeMaterialLocation,
   parseMaterialExcelRow,
 } from '../materialUtils';
+import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface MaterialPageProps {
   state: AppState;
@@ -388,8 +389,32 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
     e.target.value = '';
   };
 
-  const handlePrint = () => {
-    window.print();
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const materialPrintRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPdf = async () => {
+    if (!materialPrintRef.current || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadElementAsPdf(materialPrintRef.current, {
+        filename: `Material_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
+        paperSize: 'A4-portrait',
+      });
+    } catch (err) {
+      console.error('Gagal export PDF material:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    await triggerPrintWithPdfFallback({
+      getElement: () => materialPrintRef.current,
+      pdfOptions: {
+        filename: `Material_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
+        paperSize: 'A4-portrait',
+      },
+    });
   };
 
   const visibleItemsCount = visibleGroups.reduce((sum, g) => sum + g.items.length, 0);
@@ -440,6 +465,14 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
             </label>
             <button 
+              onClick={handleDownloadPdf}
+              disabled={isExportingPdf || visibleGroups.length === 0}
+              className="bg-accent-400 hover:bg-accent-500 disabled:opacity-50 text-brand-950 px-3 md:px-3.5 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors whitespace-nowrap"
+            >
+              <FileDown className="w-4 h-4 shrink-0" />
+              <span>{isExportingPdf ? 'PDF...' : 'Download PDF'}</span>
+            </button>
+            <button 
               onClick={handlePrint}
               className="bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3 md:px-3.5 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors whitespace-nowrap"
             >
@@ -466,13 +499,14 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
         </div>
       </div>
 
+      <div ref={materialPrintRef} className="print:bg-white print:text-black">
       {/* Print Header */}
-      <div className="hidden print-only mb-6">
-          <h1 className="text-2xl font-bold uppercase">{state.companyProfile.name}</h1>
-          <h2 className="text-xl font-bold">Laporan Material Per Tempat Proyek</h2>
-          <p>Proyek: {currentProject?.name} {currentPeriod ? `(${currentPeriod.name})` : ''}</p>
+      <div className="hidden print-only mb-6 text-black bg-white">
+          <h1 className="text-2xl font-bold uppercase text-black">{state.companyProfile.name}</h1>
+          <h2 className="text-xl font-bold text-black">Laporan Material Per Tempat Proyek</h2>
+          <p className="text-black">Proyek: {currentProject?.name} {currentPeriod ? `(${currentPeriod.name})` : ''}</p>
           {activeFilterLocationName && (
-            <p className="font-semibold">Filter Tempat: {activeFilterLocationName}</p>
+            <p className="font-semibold text-black">Filter Tempat: {activeFilterLocationName}</p>
           )}
       </div>
 
@@ -816,7 +850,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
 
       {/* DESKTOP & PRINT GROUPED TABLE VIEW */}
       {visibleGroups.length > 0 && (
-        <div className="hidden md:block space-y-6 print:block print:space-y-4">
+        <div className="hidden md:block space-y-6 print:block print:space-y-4 pdf-force-show">
           {visibleGroups.map(group => (
             <section
               key={group.key}
@@ -958,7 +992,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
         </div>
       )}
 
-      <div className="hidden print-only mt-12 flex justify-end">
+      <div className="hidden print-only-flex mt-12 justify-end text-black">
          <div className="text-center w-48">
             <p className="mb-2">Mengetahui,</p>
             {state.companyProfile.signature ? (
@@ -968,6 +1002,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
             )}
             <p className="font-bold underline">{state.companyProfile.director}</p>
          </div>
+      </div>
       </div>
     </div>
   );

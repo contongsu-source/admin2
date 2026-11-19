@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AppState, RABItem } from '../types';
-import { Plus, Trash2, Edit2, Save, X, FileSpreadsheet, Download, Printer } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, FileSpreadsheet, Download, Printer, FileDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface RABPageProps {
   state: AppState;
@@ -14,6 +15,8 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
   const currentProject = state.projects.find(p => p.id === projectId);
   
   const [showForm, setShowForm] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const rabPrintRef = useRef<HTMLDivElement>(null);
   const [newItem, setNewItem] = useState<Partial<RABItem>>({
     itemName: '',
     quantity: 1,
@@ -63,8 +66,29 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
     XLSX.writeFile(wb, `RAB_${currentProject?.name || 'Proyek'}.xlsx`);
   };
 
-  const handlePrint = () => {
-      window.print();
+  const handleDownloadPdf = async () => {
+      if (!rabPrintRef.current || isExportingPdf) return;
+      setIsExportingPdf(true);
+      try {
+          await downloadElementAsPdf(rabPrintRef.current, {
+              filename: `RAB_${currentProject?.name || 'Proyek'}`,
+              paperSize: 'A4-portrait',
+          });
+      } catch (err) {
+          console.error('Gagal export PDF RAB:', err);
+      } finally {
+          setIsExportingPdf(false);
+      }
+  };
+
+  const handlePrint = async () => {
+      await triggerPrintWithPdfFallback({
+          getElement: () => rabPrintRef.current,
+          pdfOptions: {
+              filename: `RAB_${currentProject?.name || 'Proyek'}`,
+              paperSize: 'A4-portrait',
+          },
+      });
   };
 
   return (
@@ -77,12 +101,15 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
         `}
       </style>
       
-      <div className="flex justify-between items-center no-print">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 no-print">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Rencana Anggaran Biaya (RAB)</h2>
           <p className="text-gray-500 dark:text-gray-400">Perencanaan anggaran proyek</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+            <button onClick={handleDownloadPdf} disabled={isExportingPdf} className="flex items-center gap-2 bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 font-bold px-4 py-2 rounded-lg transition-colors">
+                <FileDown className="w-4 h-4" /> {isExportingPdf ? 'PDF...' : 'Download PDF'}
+            </button>
             <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
                 <Printer className="w-4 h-4" /> Cetak PDF
             </button>
@@ -95,17 +122,18 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
         </div>
       </div>
 
+      <div ref={rabPrintRef} className="print:bg-white print:text-black">
       {/* Print Header */}
-      <div className="hidden print-only mb-6">
-        <h1 className="text-2xl font-bold uppercase">{state.companyProfile.name}</h1>
-        <p className="text-sm">{state.companyProfile.address}</p>
+      <div className="hidden print-only mb-6 text-black bg-white">
+        <h1 className="text-2xl font-bold uppercase text-black">{state.companyProfile.name}</h1>
+        <p className="text-sm text-gray-700">{state.companyProfile.address}</p>
         <div className="border-b-2 border-black my-4"></div>
-        <h2 className="text-xl font-bold uppercase">Rencana Anggaran Biaya (RAB)</h2>
-        <p className="font-bold">Proyek: {currentProject?.name}</p>
+        <h2 className="text-xl font-bold uppercase text-black">Rencana Anggaran Biaya (RAB)</h2>
+        <p className="font-bold text-black">Proyek: {currentProject?.name}</p>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden print:border-black print:shadow-none">
-        <table className="w-full text-sm text-left print:text-[10px]">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden print:bg-white print:text-black print:border-black print:shadow-none">
+        <table className="w-full text-sm text-left print:text-[10px] print:text-black">
           <thead className="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-xs font-semibold print:bg-gray-200 print:text-black">
             <tr>
               <th className="px-4 py-3">Nama Barang</th>
@@ -119,13 +147,13 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700 print:divide-black">
             {rabItems.map(item => (
-              <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-4 py-3 font-medium">{item.itemName}</td>
-                <td className="px-4 py-3 text-gray-500">{item.category}</td>
-                <td className="px-4 py-3 text-right">{item.quantity}</td>
-                <td className="px-4 py-3">{item.unit}</td>
-                <td className="px-4 py-3 text-right">Rp {item.unitPrice.toLocaleString('id-ID')}</td>
-                <td className="px-4 py-3 text-right font-bold">Rp {item.totalPrice.toLocaleString('id-ID')}</td>
+              <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 print:hover:bg-transparent">
+                <td className="px-4 py-3 font-medium text-gray-900 dark:text-white print:text-black">{item.itemName}</td>
+                <td className="px-4 py-3 text-gray-500 dark:text-gray-300 print:text-black">{item.category}</td>
+                <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-200 print:text-black">{item.quantity}</td>
+                <td className="px-4 py-3 text-gray-900 dark:text-gray-200 print:text-black">{item.unit}</td>
+                <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-200 print:text-black">Rp {item.unitPrice.toLocaleString('id-ID')}</td>
+                <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white print:text-black">Rp {item.totalPrice.toLocaleString('id-ID')}</td>
                 <td className="px-4 py-3 text-center no-print">
                     <button onClick={() => handleDelete(item.id)} className="text-red-500 hover:text-red-700">
                         <Trash2 className="w-4 h-4" />
@@ -133,13 +161,14 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
                 </td>
               </tr>
             ))}
-            <tr className="bg-gray-50 dark:bg-gray-700 font-bold print:bg-gray-200">
-                <td colSpan={5} className="px-4 py-3 text-right">TOTAL ANGGARAN</td>
-                <td className="px-4 py-3 text-right">Rp {totalBudget.toLocaleString('id-ID')}</td>
+            <tr className="bg-gray-50 dark:bg-gray-700 font-bold print:bg-gray-200 print:text-black">
+                <td colSpan={5} className="px-4 py-3 text-right text-gray-900 dark:text-white print:text-black">TOTAL ANGGARAN</td>
+                <td className="px-4 py-3 text-right text-gray-900 dark:text-white print:text-black">Rp {totalBudget.toLocaleString('id-ID')}</td>
                 <td className="no-print"></td>
             </tr>
           </tbody>
         </table>
+      </div>
       </div>
 
 

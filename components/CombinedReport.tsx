@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { AppState, DailyAttendance } from '../types';
-import { Printer } from 'lucide-react';
+import { Printer, FileDown } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { terbilang } from '../utils';
+import { downloadElementAsPdf } from '../pdfUtils';
 
 interface CombinedReportProps {
   state: AppState;
@@ -10,9 +11,39 @@ interface CombinedReportProps {
 
 export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
   const componentRef = useRef<HTMLDivElement>(null);
-  const handlePrint = useReactToPrint({
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const handleReactPrint = useReactToPrint({
     contentRef: componentRef,
   });
+
+  const handleDownloadPdf = async () => {
+    if (!componentRef.current || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadElementAsPdf(componentRef.current, {
+        filename: `Laporan_Lengkap_${state.projects.find(p => p.id === state.currentProjectId)?.name || 'Proyek'}`,
+        paperSize: 'A4-portrait',
+      });
+    } catch (err) {
+      console.error('Gagal export PDF laporan lengkap:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    let inIframe = false;
+    try {
+      inIframe = window.self !== window.top;
+    } catch {
+      inIframe = true;
+    }
+    if (inIframe) {
+      await handleDownloadPdf();
+      return;
+    }
+    handleReactPrint();
+  };
 
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
@@ -55,16 +86,26 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Laporan Lengkap Periode</h2>
           <p className="text-gray-500 dark:text-gray-400">Cetak semua laporan jadi satu PDF</p>
         </div>
-        <button 
-          onClick={() => handlePrint()}
-          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors"
-        >
-          <Printer className="w-4 h-4" />
-          Cetak PDF
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={handleDownloadPdf}
+            disabled={isExportingPdf}
+            className="flex items-center gap-2 bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 font-bold px-4 py-2 rounded-lg transition-colors"
+          >
+            <FileDown className="w-4 h-4" />
+            {isExportingPdf ? 'Membuat PDF...' : 'Download PDF'}
+          </button>
+          <button 
+            onClick={() => handlePrint()}
+            className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Cetak PDF
+          </button>
+        </div>
       </div>
 
-      <div ref={componentRef} className="bg-white p-8 border rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 print:p-0 print:border-0 print:shadow-none">
+      <div ref={componentRef} className="bg-white p-8 border rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 print:p-0 print:border-0 print:shadow-none print:bg-white print:text-black">
         {/* Attendance Content */}
         <div className="break-after-page mb-8">
             <h2 className="text-xl font-bold mb-4">Absensi Kerja</h2>

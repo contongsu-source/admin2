@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AppState, DailyAttendance } from '../types';
-import { Printer, ArrowLeft, Check, Layers, Sliders, CheckSquare, Square, Building2, Calendar, FileText, CreditCard } from 'lucide-react';
+import { Printer, ArrowLeft, Check, Layers, Sliders, CheckSquare, Square, Building2, Calendar, FileText, CreditCard, FileDown } from 'lucide-react';
 import { terbilang } from '../utils';
 import { AttendancePage } from './AttendancePage';
 import { PayrollPage } from './PayrollPage';
 import { MaterialPage } from './MaterialPage';
 import { InvoicePage } from './InvoicePage';
+import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface ConsolidatedReportProps {
   state: AppState;
@@ -29,6 +30,9 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
   const [includePayroll, setIncludePayroll] = useState(true);
   const [includeMaterials, setIncludeMaterials] = useState(true);
   const [includeInvoice, setIncludeInvoice] = useState(true);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const singlePageRef = useRef<HTMLDivElement>(null);
+  const multiPageRef = useRef<HTMLDivElement>(null);
 
   // Filter project workers who belong to this project
   const periodEmployeeIds = new Set(records.map(r => r.employeeId));
@@ -100,8 +104,41 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
   const currentDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   const docNo = `LPR-SBM/${new Date().getFullYear()}/${(currentPeriod?.name || '01').replace(/\s+/g, '-').slice(0, 10).toUpperCase()}`;
 
-  const handlePrint = () => {
-    window.print();
+  const getActiveReportElement = () =>
+    reportMode === 'single-page' ? singlePageRef.current : multiPageRef.current;
+
+  const getMappedPaperSize = () =>
+    paperSize === 'A4' ? 'A4-portrait' : paperSize;
+
+  const getPdfFilename = () =>
+    `Laporan_Terpadu_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`;
+
+  const handleDownloadPdf = async () => {
+    const el = getActiveReportElement();
+    if (!el || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadElementAsPdf(el, {
+        filename: getPdfFilename(),
+        paperSize: getMappedPaperSize(),
+        preferSinglePage: reportMode === 'single-page',
+      });
+    } catch (err) {
+      console.error('Gagal export PDF:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    await triggerPrintWithPdfFallback({
+      getElement: getActiveReportElement,
+      pdfOptions: {
+        filename: getPdfFilename(),
+        paperSize: getMappedPaperSize(),
+        preferSinglePage: reportMode === 'single-page',
+      },
+    });
   };
 
   // Dynamic styling based on density
@@ -168,8 +205,8 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
           margin: 0 !important;
           box-shadow: none !important;
           border: none !important;
-          page-break-after: avoid !important;
-          page-break-inside: avoid !important;
+          background: #ffffff !important;
+          color: #000000 !important;
         }
         .no-break {
           page-break-inside: avoid !important;
@@ -210,10 +247,18 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isExportingPdf}
+              className="flex-1 md:flex-none bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+            >
+              <FileDown className="w-4 h-4" />
+              {isExportingPdf ? 'Membuat PDF...' : 'Download PDF'}
+            </button>
             <button
               onClick={handlePrint}
-              className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20 active:scale-95"
+              className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20 active:scale-95"
             >
               <Printer className="w-4 h-4" />
               Cetak 1 Lembar Sekarang
@@ -386,6 +431,7 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
       {/* ======================= MODE 1: SINGLE-PAGE MASTER PRINT ======================= */}
       {reportMode === 'single-page' && (
         <div 
+          ref={singlePageRef}
           className={`single-page-wrapper bg-white text-black p-6 md:p-8 mx-auto shadow-lg border border-gray-200 rounded-xl font-sans print:shadow-none print:border-0 print:p-0 print:w-full print:bg-white print:text-black ${
             paperSize === 'A4-landscape' ? 'max-w-5xl' : 'max-w-4xl'
           }`}
@@ -785,10 +831,11 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
             </button>
           </div>
 
-          <div className="print:space-y-12">
+          <div ref={multiPageRef} className="print:space-y-12">
             <div className="print:break-after-page">
               <AttendancePage 
                 state={state} 
+                initialViewMode="table"
                 onUpdate={() => {}} 
                 onAddEmployee={() => {}} 
                 onUpdateEmployee={() => {}} 
@@ -801,6 +848,7 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
               <PayrollPage 
                 state={state} 
                 hideSlips={true} 
+                initialPrintMode="recap"
                 onUpdateEmployee={() => {}} 
                 onUpdateAttendance={() => {}} 
               />

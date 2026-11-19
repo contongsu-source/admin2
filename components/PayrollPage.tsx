@@ -1,26 +1,32 @@
 import React, { useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { AppState, Employee, DailyAttendance, AttendanceRecord } from '../types';
-import { Download, Printer, Edit2, Save, FileText } from 'lucide-react';
+import { Download, Printer, Edit2, Save, FileText, FileDown } from 'lucide-react';
 import { toJpeg } from 'html-to-image';
 import { terbilang } from '../utils';
+import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface PayrollPageProps {
   state: AppState;
   onUpdateEmployee?: (emp: Employee) => void;
   onUpdateAttendance?: (records: AttendanceRecord[]) => void;
   hideSlips?: boolean;
+  initialPrintMode?: 'slips' | 'recap';
   onChangeView?: (view: string) => void;
 }
 
-export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmployee, onUpdateAttendance, hideSlips = false, onChangeView }) => {
+export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmployee, onUpdateAttendance, hideSlips = false, initialPrintMode = 'slips', onChangeView }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
   const records = state.attendance[currentPeriod?.id || ''] || [];
   const [isEditingRates, setIsEditingRates] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const recapRef = useRef<HTMLDivElement>(null);
+  const slipsRef = useRef<HTMLDivElement>(null);
   
   // 'slips' = individual slips (print-only shows loops of slips)
   // 'recap' = summary table (print-only shows table)
-  const [printMode, setPrintMode] = useState<'slips' | 'recap'>('slips');
+  const [printMode, setPrintMode] = useState<'slips' | 'recap'>(initialPrintMode);
   
   const downloadSlip = async (empId: string) => {
     const element = document.getElementById(`slip-${empId}`);
@@ -42,18 +48,48 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
     }
   };
 
-  const handlePrintSlips = () => {
-      setPrintMode('slips');
-      setTimeout(() => {
-        window.print();
-      }, 100);
+  const handleDownloadRecapPdf = async () => {
+      if (isExportingPdf) return;
+      setIsExportingPdf(true);
+      try {
+          flushSync(() => {
+              setPrintMode('recap');
+          });
+          await downloadElementAsPdf(recapRef.current, {
+              filename: `Rekap_Gaji_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
+              paperSize: 'A4-portrait',
+          });
+      } catch (err) {
+          console.error('Gagal export PDF rekap gaji:', err);
+      } finally {
+          setIsExportingPdf(false);
+      }
   };
 
-  const handlePrintRecap = () => {
-      setPrintMode('recap');
-      setTimeout(() => {
-        window.print();
-      }, 100);
+  const handlePrintSlips = async () => {
+      flushSync(() => {
+          setPrintMode('slips');
+      });
+      await triggerPrintWithPdfFallback({
+          getElement: () => slipsRef.current,
+          pdfOptions: {
+              filename: `Slip_Gaji_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
+              paperSize: 'A4-portrait',
+          },
+      });
+  };
+
+  const handlePrintRecap = async () => {
+      flushSync(() => {
+          setPrintMode('recap');
+      });
+      await triggerPrintWithPdfFallback({
+          getElement: () => recapRef.current,
+          pdfOptions: {
+              filename: `Rekap_Gaji_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
+              paperSize: 'A4-portrait',
+          },
+      });
   };
 
   const updateRate = (empId: string, field: 'dailyRate' | 'overtimeRate' | 'cashAdvance', value: string) => {
@@ -130,13 +166,21 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Pengeluaran Gaji</p>
                 <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">Rp {grandTotal.toLocaleString('id-ID')}</p>
             </div>
-            <div className="flex gap-2 mb-1">
+            <div className="flex flex-wrap gap-2 mb-1">
                  <button 
                     onClick={() => setIsEditingRates(!isEditingRates)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors h-10 ${isEditingRates ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
                 >
                     {isEditingRates ? <Save className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
                     {isEditingRates ? 'Selesai Edit' : 'Atur Gaji & Lembur'}
+                </button>
+                <button 
+                    onClick={handleDownloadRecapPdf}
+                    disabled={isExportingPdf}
+                    className="bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-3.5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors h-10"
+                >
+                    <FileDown className="w-4 h-4" />
+                    {isExportingPdf ? 'PDF...' : 'Download PDF'}
                 </button>
                 <button 
                     onClick={handlePrintRecap}
@@ -148,7 +192,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                 {onChangeView && (
                     <button 
                         onClick={() => onChangeView('consolidated_report')}
-                        className="bg-accent-400 hover:bg-accent-500 text-brand-950 px-3.5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm h-10"
+                        className="bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm h-10"
                         title="Cetak Absensi, Gaji, Material, dan Invoice dalam 1 Lembar"
                     >
                         <Printer className="w-4 h-4" />
@@ -168,6 +212,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
         </div>
       </div>
 
+      <div ref={recapRef} className="print:bg-white print:text-black">
       {/* RECAP HEADER (Visible only when printMode is 'recap') */}
       {printMode === 'recap' && (
         <style type="text/css" media="print">
@@ -380,7 +425,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
       </div>
 
       {/* RECAP FOOTER SIGNATURE (Visible only when printMode is 'recap') */}
-      <div className={`hidden ${printMode === 'recap' ? 'print-only' : ''} mt-8 flex justify-end`}>
+      <div className={`hidden ${printMode === 'recap' ? 'print-only-flex' : ''} mt-8 justify-end`}>
          <div className="text-center w-48">
             <p className="mb-2">Mengetahui,</p>
             {state.companyProfile.signature ? (
@@ -392,11 +437,12 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
             <p>Direktur</p>
          </div>
       </div>
+      </div>
 
       {/* PRINT SLIPS LAYOUT - Visible only when printing AND mode is 'slips' */}
-      <div className={`hidden ${printMode === 'slips' ? 'print-only' : ''} ${hideSlips ? 'no-print' : ''}`}>
-        {payrollData.map((row) => (
-            <div key={row.emp.id} className="page-break w-full max-w-2xl mx-auto pt-8">
+      <div ref={slipsRef} className={`hidden ${printMode === 'slips' ? 'print-only' : ''} ${hideSlips ? 'no-print' : ''} bg-white text-black`}>
+        {payrollData.map((row, idx) => (
+            <div key={row.emp.id} className={`${idx > 0 ? 'page-break' : ''} w-full max-w-2xl mx-auto pt-8`}>
                  <div className="border-2 border-gray-800 p-8 bg-white">
                     <div className="border-b-2 border-gray-900 pb-4 mb-4 flex justify-between items-center">
                         <div>

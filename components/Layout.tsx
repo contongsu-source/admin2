@@ -25,7 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
   const projectPeriods = state.periods.filter(p => p.projectId === state.currentProjectId);
 
   return (
-    <div className="flex min-h-screen bg-[#f6f9f6] dark:bg-[#0d1510] transition-colors duration-200 font-sans selection:bg-brand-600 selection:text-white print:block print:min-h-0 print:bg-white">
+    <div className="flex min-h-screen bg-[#f6f9f6] dark:bg-[#0d1510] transition-colors duration-200 font-sans selection:bg-brand-600 selection:text-white print:block print:min-h-0 print:bg-white print:text-black print:transition-none">
       <Sidebar 
         currentView={currentView} 
         onChangeView={onChangeView} 
@@ -126,7 +126,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onChangeV
         </header>
 
         {/* Main Content */}
-        <main className="p-4 md:p-8 flex-1 overflow-x-hidden w-full dark:text-gray-200 max-w-7xl mx-auto print:block print:overflow-visible print:p-0 print:max-w-none">
+        <main className="p-4 md:p-8 flex-1 overflow-x-hidden w-full dark:text-gray-200 max-w-7xl mx-auto print:block print:overflow-visible print:p-0 print:max-w-none print:text-black print:bg-white">
           {children}
         </main>
       </div>

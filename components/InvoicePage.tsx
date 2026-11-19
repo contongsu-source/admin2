@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppState, DailyAttendance, MaterialItem } from '../types';
 import { Printer, Plus, Trash2, RefreshCw, FileText, Edit, Check, Settings2, Sparkles, FileDown, Eye } from 'lucide-react';
 import { terbilang } from '../utils';
+import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface InvoicePageProps {
   state: AppState;
@@ -54,6 +55,9 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
 
   const [activeTab, setActiveTab] = useState<'automatic' | 'custom'>('automatic');
   const [mobileMode, setMobileMode] = useState<'edit' | 'preview'>('edit');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const autoInvoiceRef = useRef<HTMLDivElement>(null);
+  const customInvoiceRef = useRef<HTMLDivElement>(null);
 
   // Calculate project totals
   let totalWagesNet = 0;
@@ -281,8 +285,39 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const getActiveInvoiceRef = () =>
+    activeTab === 'automatic' ? autoInvoiceRef.current : customInvoiceRef.current;
+
+  const getInvoicePdfOptions = () => ({
+    filename:
+      activeTab === 'automatic'
+        ? `Invoice_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`
+        : `Nota_${customInvoice.invoiceNo || currentProject?.name || 'Custom'}`,
+    paperSize: (activeTab === 'custom' ? customInvoice.paperSize || 'A4' : 'A4') as
+      | 'A4'
+      | 'A5-landscape'
+      | 'A5-portrait',
+    preferSinglePage: true,
+  });
+
+  const handleDownloadPdf = async () => {
+    const el = getActiveInvoiceRef();
+    if (!el || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadElementAsPdf(el, getInvoicePdfOptions());
+    } catch (err) {
+      console.error('Gagal export PDF invoice:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    await triggerPrintWithPdfFallback({
+      getElement: getActiveInvoiceRef,
+      pdfOptions: getInvoicePdfOptions(),
+    });
   };
 
   const currentDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -311,6 +346,14 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
                 Cetak 1 Lembar Terpadu
               </button>
               <button 
+                onClick={handleDownloadPdf}
+                disabled={isExportingPdf}
+                className="bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
+              >
+                <FileDown className="w-4 h-4" />
+                {isExportingPdf ? 'Membuat PDF...' : 'Download PDF'}
+              </button>
+              <button 
                 onClick={handlePrint}
                 className="bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-sm"
               >
@@ -327,6 +370,14 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
               >
                 <Printer className="w-4 h-4" />
                 Cetak 1 Lembar Terpadu
+              </button>
+              <button 
+                onClick={handleDownloadPdf}
+                disabled={isExportingPdf}
+                className="bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
+              >
+                <FileDown className="w-4 h-4" />
+                {isExportingPdf ? 'Membuat PDF...' : 'Download PDF'}
               </button>
               <button 
                 onClick={handlePrint}
@@ -368,7 +419,7 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
 
       {/* Tab 1: Automatic Invoice */}
       {activeTab === 'automatic' && (
-        <div className="bg-white dark:bg-gray-800 p-8 md:p-12 shadow-sm border border-gray-200 dark:border-gray-700 max-w-4xl mx-auto print:shadow-none print:border-0 print:p-0 print:w-full print:bg-white print:text-black">
+        <div ref={autoInvoiceRef} className="bg-white dark:bg-gray-800 p-8 md:p-12 shadow-sm border border-gray-200 dark:border-gray-700 max-w-4xl mx-auto print:shadow-none print:border-0 print:p-0 print:w-full print:bg-white print:text-black">
           {/* Header */}
           <div className="flex justify-between items-start mb-12 border-b border-gray-200 dark:border-gray-700 pb-8">
               <div className="flex items-center gap-4">
@@ -865,7 +916,7 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
           </div>
 
           {/* RIGHT: Document Preview & Table Editor */}
-          <div className={`lg:col-span-8 space-y-6 ${mobileMode === 'preview' ? 'block' : 'hidden lg:block'}`}>
+          <div className={`lg:col-span-8 space-y-6 ${mobileMode === 'preview' ? 'block' : 'hidden lg:block print:block pdf-force-show'}`}>
             
             {/* Table Editing Grid (Displayed above the preview card as a distinct widget so they don't have to fiddle in tables) */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4 no-print">
@@ -977,6 +1028,7 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
 
             {/* Document Print Area (Looks like real paper receipt) */}
             <div 
+              ref={customInvoiceRef}
               className={`bg-white text-black print-a5-container shadow-md border border-gray-200 rounded-xl mx-auto print:shadow-none print:border-0 print:p-0 print:w-full print:bg-white print:text-black ${
                 customInvoice.paperSize === 'A5-landscape'
                   ? 'max-w-4xl p-6 md:p-8'

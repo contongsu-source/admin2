@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState, AttendanceRecord, ProjectPeriod, Employee } from '../types';
-import { Check, QrCode, Search, Smartphone, Clock, Users, Plus, X, Trash2, Save, Edit2, Printer, List, Table, Upload } from 'lucide-react';
+import { Check, QrCode, Search, Smartphone, Clock, Users, Plus, X, Trash2, Save, Edit2, Printer, List, Table, Upload, FileDown } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
+import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface AttendancePageProps {
   state: AppState;
@@ -13,6 +14,7 @@ interface AttendancePageProps {
   onRemoveFromPeriod: (empId: string, periodId: string) => void;
   onAddToPeriod: (empId: string, periodId: string) => void;
   onChangeView?: (view: string) => void;
+  initialViewMode?: 'table' | 'scan' | 'qr_list';
 }
 
 export const AttendancePage: React.FC<AttendancePageProps> = ({ 
@@ -23,7 +25,8 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   onDeleteEmployee,
   onRemoveFromPeriod,
   onAddToPeriod,
-  onChangeView
+  onChangeView,
+  initialViewMode = 'scan'
 }) => {
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
@@ -41,7 +44,9 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
   const [isEditing, setIsEditing] = useState(false);
   const [showEmpManager, setShowEmpManager] = useState(false); // Modal state
-  const [viewMode, setViewMode] = useState<'table' | 'scan' | 'qr_list'>('scan');
+  const [viewMode, setViewMode] = useState<'table' | 'scan' | 'qr_list'>(initialViewMode);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const attendancePrintRef = useRef<HTMLDivElement>(null);
   const [localRecords, setLocalRecords] = useState<AttendanceRecord[]>(records);
   const [scanInput, setScanInput] = useState('');
   const [lastScanned, setLastScanned] = useState<{name: string, time: string} | null>(null);
@@ -433,8 +438,29 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
       }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    if (!attendancePrintRef.current || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadElementAsPdf(attendancePrintRef.current, {
+        filename: `Absensi_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
+        paperSize: 'A4-landscape',
+      });
+    } catch (err) {
+      console.error('Gagal export PDF absensi:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    await triggerPrintWithPdfFallback({
+      getElement: () => attendancePrintRef.current,
+      pdfOptions: {
+        filename: `Absensi_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
+        paperSize: 'A4-landscape',
+      },
+    });
   };
 
   return (
@@ -772,6 +798,14 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                     Karyawan
                 </button>
                 <button 
+                    onClick={handleDownloadPdf}
+                    disabled={isExportingPdf}
+                    className="flex-1 md:flex-none bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-3.5 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                    <FileDown className="w-4 h-4" />
+                    {isExportingPdf ? 'PDF...' : 'Download PDF'}
+                </button>
+                <button 
                     onClick={handlePrint}
                     className="flex-1 md:flex-none bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
                 >
@@ -941,7 +975,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
         </div>
 
         {/* PRINT LAYOUT FOR ATTENDANCE */}
-        <div className="hidden print-only">
+        <div ref={attendancePrintRef} className="hidden print-only bg-white text-black p-4">
              <div className="mb-6">
                 <h1 className="text-2xl font-bold uppercase">{state.companyProfile.name}</h1>
                 <p className="text-sm">{state.companyProfile.address}</p>

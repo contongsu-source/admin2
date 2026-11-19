@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AppState, PettyCashTransaction } from '../types';
-import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, ArrowUpRight, ArrowDownRight, X, Printer, Upload, Info, Download, FileSpreadsheet, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, ArrowUpRight, ArrowDownRight, X, Printer, Upload, Info, Download, FileSpreadsheet, AlertCircle, Image as ImageIcon, FileDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface PettyCashPageProps {
   state: AppState;
@@ -23,6 +24,8 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
   const [showForm, setShowForm] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const pettyCashPrintRef = useRef<HTMLDivElement>(null);
   const [newTrans, setNewTrans] = useState<Partial<PettyCashTransaction>>({
     date: new Date().toISOString().split('T')[0],
     description: '',
@@ -287,8 +290,31 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
     e.target.value = ''; 
   };
 
-  const handlePrint = () => {
-    window.print();
+  const currentProjectName = state.projects.find(p => p.id === state.currentProjectId)?.name || 'Proyek';
+
+  const handleDownloadPdf = async () => {
+    if (!pettyCashPrintRef.current || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadElementAsPdf(pettyCashPrintRef.current, {
+        filename: `Kas_Kecil_${currentProjectName}`,
+        paperSize: 'A4-portrait',
+      });
+    } catch (err) {
+      console.error('Gagal export PDF kas kecil:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    await triggerPrintWithPdfFallback({
+      getElement: () => pettyCashPrintRef.current,
+      pdfOptions: {
+        filename: `Kas_Kecil_${currentProjectName}`,
+        paperSize: 'A4-portrait',
+      },
+    });
   };
 
   return (
@@ -316,6 +342,14 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                 Import
                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
             </label>
+             <button 
+              onClick={handleDownloadPdf}
+              disabled={isExportingPdf}
+              className="flex-1 md:flex-none bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+              <FileDown className="w-4 h-4" />
+              {isExportingPdf ? 'PDF...' : 'Download PDF'}
+            </button>
              <button 
               onClick={handlePrint}
               className="flex-1 md:flex-none bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
@@ -548,8 +582,18 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
           )}
       </div>
 
+      <div ref={pettyCashPrintRef} className="print:bg-white print:text-black">
+      {/* Print Header */}
+      <div className="hidden print-only mb-6 text-black bg-white">
+          <h1 className="text-2xl font-bold uppercase text-black">{state.companyProfile.name}</h1>
+          <p className="text-sm text-gray-700">{state.companyProfile.address}</p>
+          <div className="border-b-2 border-black my-4"></div>
+          <h2 className="text-xl font-bold uppercase text-black">Laporan Kas Kecil</h2>
+          <p className="font-bold text-black">Proyek: {currentProjectName}</p>
+      </div>
+
       {/* Desktop Table */}
-      <div className="hidden md:block print:block bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden print:border-black print:shadow-none print:bg-transparent">
+      <div className="hidden md:block print:block pdf-force-show bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden print:border-black print:shadow-none print:bg-white print:text-black">
           <table className="w-full text-sm text-left print:text-xs">
               <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 uppercase text-xs font-bold print:bg-gray-200 print:text-black">
                   <tr className="print:border-b-2 print:border-black">
@@ -589,7 +633,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
           </table>
       </div>
 
-      <div className="hidden print-only mt-8">
+      <div className="hidden print-only mt-8 text-black">
             <div className="flex justify-between items-start border-t border-black pt-4">
                 <div>
                      <p className="text-sm">Dicetak Tanggal: {new Date().toLocaleDateString('id-ID')}</p>
@@ -600,6 +644,7 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                     <p className="font-bold text-xl mt-2">Sisa Saldo: Rp {currentBalance.toLocaleString('id-ID')}</p>
                 </div>
             </div>
+      </div>
       </div>
     </div>
   );
