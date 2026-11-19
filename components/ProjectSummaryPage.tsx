@@ -15,11 +15,10 @@ import {
   X,
   CheckCircle2,
   Clock,
-  AlertCircle,
-  FileDown
+  AlertCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface ProjectSummaryPageProps {
   state: AppState;
@@ -260,23 +259,7 @@ export const ProjectSummaryPage: React.FC<ProjectSummaryPageProps> = ({ state })
     setSelectedIds(ids);
   };
 
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const summaryPrintRef = useRef<HTMLDivElement>(null);
-
-  const handleDownloadPdf = async () => {
-    if (!summaryPrintRef.current || isExportingPdf) return;
-    setIsExportingPdf(true);
-    try {
-      await downloadElementAsPdf(summaryPrintRef.current, {
-        filename: 'Rekap_Gabungan_Proyek',
-        paperSize: 'A4-portrait',
-      });
-    } catch (err) {
-      console.error('Gagal export PDF rekap proyek:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
 
   const handlePrint = async () => {
     await triggerPrintWithPdfFallback({
@@ -405,17 +388,6 @@ export const ProjectSummaryPage: React.FC<ProjectSummaryPageProps> = ({ state })
           >
             <Download className="w-4 h-4 text-accent-300" />
             <span>Excel</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            disabled={isExportingPdf}
-            className="bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
-            title="Download PDF rekap proyek yang ditandai"
-          >
-            <FileDown className="w-4 h-4" />
-            <span>{isExportingPdf ? 'PDF...' : 'Download PDF'}</span>
           </button>
 
           <button

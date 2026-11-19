@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { AppState, RABItem } from '../types';
-import { Plus, Trash2, Edit2, Save, X, FileSpreadsheet, Download, Printer, FileDown } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, FileSpreadsheet, Download, Printer } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface RABPageProps {
   state: AppState;
@@ -15,7 +15,6 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
   const currentProject = state.projects.find(p => p.id === projectId);
   
   const [showForm, setShowForm] = useState(false);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const rabPrintRef = useRef<HTMLDivElement>(null);
   const [newItem, setNewItem] = useState<Partial<RABItem>>({
     itemName: '',
@@ -66,21 +65,6 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
     XLSX.writeFile(wb, `RAB_${currentProject?.name || 'Proyek'}.xlsx`);
   };
 
-  const handleDownloadPdf = async () => {
-      if (!rabPrintRef.current || isExportingPdf) return;
-      setIsExportingPdf(true);
-      try {
-          await downloadElementAsPdf(rabPrintRef.current, {
-              filename: `RAB_${currentProject?.name || 'Proyek'}`,
-              paperSize: 'A4-portrait',
-          });
-      } catch (err) {
-          console.error('Gagal export PDF RAB:', err);
-      } finally {
-          setIsExportingPdf(false);
-      }
-  };
-
   const handlePrint = async () => {
       await triggerPrintWithPdfFallback({
           getElement: () => rabPrintRef.current,
@@ -107,9 +91,6 @@ export const RABPage: React.FC<RABPageProps> = ({ state, onUpdate }) => {
           <p className="text-gray-500 dark:text-gray-400">Perencanaan anggaran proyek</p>
         </div>
         <div className="flex flex-wrap gap-2">
-            <button onClick={handleDownloadPdf} disabled={isExportingPdf} className="flex items-center gap-2 bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 font-bold px-4 py-2 rounded-lg transition-colors">
-                <FileDown className="w-4 h-4" /> {isExportingPdf ? 'PDF...' : 'Download PDF'}
-            </button>
             <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
                 <Printer className="w-4 h-4" /> Cetak PDF
             </button>

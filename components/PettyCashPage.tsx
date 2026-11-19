@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { AppState, PettyCashTransaction } from '../types';
-import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, ArrowUpRight, ArrowDownRight, X, Printer, Upload, Info, Download, FileSpreadsheet, AlertCircle, Image as ImageIcon, FileDown } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, ArrowUpRight, ArrowDownRight, X, Printer, Upload, Info, Download, FileSpreadsheet, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface PettyCashPageProps {
   state: AppState;
@@ -24,7 +24,6 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
   const [showForm, setShowForm] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const pettyCashPrintRef = useRef<HTMLDivElement>(null);
   const [newTrans, setNewTrans] = useState<Partial<PettyCashTransaction>>({
     date: new Date().toISOString().split('T')[0],
@@ -292,21 +291,6 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
 
   const currentProjectName = state.projects.find(p => p.id === state.currentProjectId)?.name || 'Proyek';
 
-  const handleDownloadPdf = async () => {
-    if (!pettyCashPrintRef.current || isExportingPdf) return;
-    setIsExportingPdf(true);
-    try {
-      await downloadElementAsPdf(pettyCashPrintRef.current, {
-        filename: `Kas_Kecil_${currentProjectName}`,
-        paperSize: 'A4-portrait',
-      });
-    } catch (err) {
-      console.error('Gagal export PDF kas kecil:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
   const handlePrint = async () => {
     await triggerPrintWithPdfFallback({
       getElement: () => pettyCashPrintRef.current,
@@ -342,14 +326,6 @@ export const PettyCashPage: React.FC<PettyCashPageProps> = ({ state, onUpdate })
                 Import
                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
             </label>
-             <button 
-              onClick={handleDownloadPdf}
-              disabled={isExportingPdf}
-              className="flex-1 md:flex-none bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
-            >
-              <FileDown className="w-4 h-4" />
-              {isExportingPdf ? 'PDF...' : 'Download PDF'}
-            </button>
              <button 
               onClick={handlePrint}
               className="flex-1 md:flex-none bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"

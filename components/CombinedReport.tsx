@@ -1,9 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { AppState, DailyAttendance } from '../types';
-import { Printer, FileDown } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { terbilang } from '../utils';
-import { downloadElementAsPdf } from '../pdfUtils';
+import { printReactIframeWithPdfFallback } from '../pdfUtils';
 
 interface CombinedReportProps {
   state: AppState;
@@ -11,39 +11,20 @@ interface CombinedReportProps {
 
 export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
   const componentRef = useRef<HTMLDivElement>(null);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const handleReactPrint = useReactToPrint({
+  const currentProjectName = state.projects.find(p => p.id === state.currentProjectId)?.name || 'Proyek';
+  const handlePrint = useReactToPrint({
     contentRef: componentRef,
-  });
-
-  const handleDownloadPdf = async () => {
-    if (!componentRef.current || isExportingPdf) return;
-    setIsExportingPdf(true);
-    try {
-      await downloadElementAsPdf(componentRef.current, {
-        filename: `Laporan_Lengkap_${state.projects.find(p => p.id === state.currentProjectId)?.name || 'Proyek'}`,
-        paperSize: 'A4-portrait',
+    documentTitle: `Laporan_Lengkap_${currentProjectName}`,
+    print: async (target) => {
+      await printReactIframeWithPdfFallback(target, {
+        getElement: () => componentRef.current,
+        pdfOptions: {
+          filename: `Laporan_Lengkap_${currentProjectName}`,
+          paperSize: 'A4-portrait',
+        },
       });
-    } catch (err) {
-      console.error('Gagal export PDF laporan lengkap:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
-  const handlePrint = async () => {
-    let inIframe = false;
-    try {
-      inIframe = window.self !== window.top;
-    } catch {
-      inIframe = true;
-    }
-    if (inIframe) {
-      await handleDownloadPdf();
-      return;
-    }
-    handleReactPrint();
-  };
+    },
+  });
 
   const currentProject = state.projects.find(p => p.id === state.currentProjectId);
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
@@ -86,32 +67,22 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Laporan Lengkap Periode</h2>
           <p className="text-gray-500 dark:text-gray-400">Cetak semua laporan jadi satu PDF</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button 
-            onClick={handleDownloadPdf}
-            disabled={isExportingPdf}
-            className="flex items-center gap-2 bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 font-bold px-4 py-2 rounded-lg transition-colors"
-          >
-            <FileDown className="w-4 h-4" />
-            {isExportingPdf ? 'Membuat PDF...' : 'Download PDF'}
-          </button>
-          <button 
-            onClick={() => handlePrint()}
-            className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            Cetak PDF
-          </button>
-        </div>
+        <button 
+          onClick={() => handlePrint()}
+          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors"
+        >
+          <Printer className="w-4 h-4" />
+          Cetak PDF
+        </button>
       </div>
 
       <div ref={componentRef} className="bg-white p-8 border rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 print:p-0 print:border-0 print:shadow-none print:bg-white print:text-black">
         {/* Attendance Content */}
         <div className="break-after-page mb-8">
-            <h2 className="text-xl font-bold mb-4">Absensi Kerja</h2>
-            <table className="w-full text-sm border-collapse">
+            <h2 className="text-xl font-bold mb-4 print:text-black">Absensi Kerja</h2>
+            <table className="w-full text-sm border-collapse print:text-black">
               <thead>
-                <tr className="border-b border-gray-800 bg-gray-50">
+                <tr className="border-b border-gray-800 bg-gray-50 print:bg-gray-100 print:text-black">
                   <th className="py-2 px-4 text-left border border-gray-800">Karyawan</th>
                   <th className="py-2 px-4 text-center border border-gray-800">Hadir</th>
                   <th className="py-2 px-4 text-center border border-gray-800">Lembur (Jam)</th>
@@ -147,10 +118,10 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
         </div>
         {/* Payroll Content */}
         <div className="break-after-page mb-8">
-            <h2 className="text-xl font-bold mb-4">Penggajian</h2>
-            <table className="w-full text-sm border-collapse">
+            <h2 className="text-xl font-bold mb-4 print:text-black">Penggajian</h2>
+            <table className="w-full text-sm border-collapse print:text-black">
               <thead>
-                <tr className="border-b border-gray-800 bg-gray-50">
+                <tr className="border-b border-gray-800 bg-gray-50 print:bg-gray-100 print:text-black">
                   <th className="py-2 px-4 text-left border border-gray-800">Karyawan</th>
                   <th className="py-2 px-4 text-right border border-gray-800">Gaji</th>
                 </tr>
@@ -188,10 +159,10 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
         </div>
         {/* Material Content */}
         <div className="break-after-page mb-8">
-            <h2 className="text-xl font-bold mb-4">Material</h2>
-            <table className="w-full text-sm border-collapse">
+            <h2 className="text-xl font-bold mb-4 print:text-black">Material</h2>
+            <table className="w-full text-sm border-collapse print:text-black">
               <thead>
-                <tr className="border-b border-gray-800 bg-gray-50">
+                <tr className="border-b border-gray-800 bg-gray-50 print:bg-gray-100 print:text-black">
                   <th className="py-2 px-4 text-left border border-gray-800">Barang</th>
                   <th className="py-2 px-4 text-right border border-gray-800">Total</th>
                 </tr>
@@ -208,8 +179,8 @@ export const CombinedReport: React.FC<CombinedReportProps> = ({ state }) => {
         </div>
         {/* Invoice Content */}
         <div>
-            <h2 className="text-xl font-bold mb-4">Invoice</h2>
-            <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-bold mb-4 print:text-black">Invoice</h2>
+            <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-white print:text-black">
               <span>Grand Total</span>
               <span>Rp {grandTotal.toLocaleString('id-ID')}</span>
             </div>

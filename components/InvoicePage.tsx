@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AppState, DailyAttendance, MaterialItem } from '../types';
 import { Printer, Plus, Trash2, RefreshCw, FileText, Edit, Check, Settings2, Sparkles, FileDown, Eye } from 'lucide-react';
 import { terbilang } from '../utils';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface InvoicePageProps {
   state: AppState;
@@ -55,7 +55,6 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
 
   const [activeTab, setActiveTab] = useState<'automatic' | 'custom'>('automatic');
   const [mobileMode, setMobileMode] = useState<'edit' | 'preview'>('edit');
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const autoInvoiceRef = useRef<HTMLDivElement>(null);
   const customInvoiceRef = useRef<HTMLDivElement>(null);
 
@@ -300,19 +299,6 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
     preferSinglePage: true,
   });
 
-  const handleDownloadPdf = async () => {
-    const el = getActiveInvoiceRef();
-    if (!el || isExportingPdf) return;
-    setIsExportingPdf(true);
-    try {
-      await downloadElementAsPdf(el, getInvoicePdfOptions());
-    } catch (err) {
-      console.error('Gagal export PDF invoice:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
   const handlePrint = async () => {
     await triggerPrintWithPdfFallback({
       getElement: getActiveInvoiceRef,
@@ -346,14 +332,6 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
                 Cetak 1 Lembar Terpadu
               </button>
               <button 
-                onClick={handleDownloadPdf}
-                disabled={isExportingPdf}
-                className="bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
-              >
-                <FileDown className="w-4 h-4" />
-                {isExportingPdf ? 'Membuat PDF...' : 'Download PDF'}
-              </button>
-              <button 
                 onClick={handlePrint}
                 className="bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-sm"
               >
@@ -370,14 +348,6 @@ export const InvoicePage: React.FC<InvoicePageProps> = ({ state, onChangeView })
               >
                 <Printer className="w-4 h-4" />
                 Cetak 1 Lembar Terpadu
-              </button>
-              <button 
-                onClick={handleDownloadPdf}
-                disabled={isExportingPdf}
-                className="bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
-              >
-                <FileDown className="w-4 h-4" />
-                {isExportingPdf ? 'Membuat PDF...' : 'Download PDF'}
               </button>
               <button 
                 onClick={handlePrint}

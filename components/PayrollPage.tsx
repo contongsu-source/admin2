@@ -1,10 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { AppState, Employee, DailyAttendance, AttendanceRecord } from '../types';
-import { Download, Printer, Edit2, Save, FileText, FileDown } from 'lucide-react';
+import { Download, Printer, Edit2, Save, FileText } from 'lucide-react';
 import { toJpeg } from 'html-to-image';
 import { terbilang } from '../utils';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface PayrollPageProps {
   state: AppState;
@@ -20,7 +20,6 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
   const currentPeriod = state.periods.find(p => p.id === currentProject?.currentPeriodId);
   const records = state.attendance[currentPeriod?.id || ''] || [];
   const [isEditingRates, setIsEditingRates] = useState(false);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const recapRef = useRef<HTMLDivElement>(null);
   const slipsRef = useRef<HTMLDivElement>(null);
   
@@ -46,24 +45,6 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
         console.error("Error generating slip", err);
         alert("Gagal membuat slip gaji");
     }
-  };
-
-  const handleDownloadRecapPdf = async () => {
-      if (isExportingPdf) return;
-      setIsExportingPdf(true);
-      try {
-          flushSync(() => {
-              setPrintMode('recap');
-          });
-          await downloadElementAsPdf(recapRef.current, {
-              filename: `Rekap_Gaji_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
-              paperSize: 'A4-portrait',
-          });
-      } catch (err) {
-          console.error('Gagal export PDF rekap gaji:', err);
-      } finally {
-          setIsExportingPdf(false);
-      }
   };
 
   const handlePrintSlips = async () => {
@@ -173,14 +154,6 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ state, onUpdateEmploye
                 >
                     {isEditingRates ? <Save className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
                     {isEditingRates ? 'Selesai Edit' : 'Atur Gaji & Lembur'}
-                </button>
-                <button 
-                    onClick={handleDownloadRecapPdf}
-                    disabled={isExportingPdf}
-                    className="bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-3.5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors h-10"
-                >
-                    <FileDown className="w-4 h-4" />
-                    {isExportingPdf ? 'PDF...' : 'Download PDF'}
                 </button>
                 <button 
                     onClick={handlePrintRecap}

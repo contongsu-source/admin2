@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState, AttendanceRecord, ProjectPeriod, Employee } from '../types';
-import { Check, QrCode, Search, Smartphone, Clock, Users, Plus, X, Trash2, Save, Edit2, Printer, List, Table, Upload, FileDown } from 'lucide-react';
+import { Check, QrCode, Search, Smartphone, Clock, Users, Plus, X, Trash2, Save, Edit2, Printer, List, Table, Upload } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface AttendancePageProps {
   state: AppState;
@@ -45,7 +45,6 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [showEmpManager, setShowEmpManager] = useState(false); // Modal state
   const [viewMode, setViewMode] = useState<'table' | 'scan' | 'qr_list'>(initialViewMode);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const attendancePrintRef = useRef<HTMLDivElement>(null);
   const [localRecords, setLocalRecords] = useState<AttendanceRecord[]>(records);
   const [scanInput, setScanInput] = useState('');
@@ -438,21 +437,6 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
       }
   };
 
-  const handleDownloadPdf = async () => {
-    if (!attendancePrintRef.current || isExportingPdf) return;
-    setIsExportingPdf(true);
-    try {
-      await downloadElementAsPdf(attendancePrintRef.current, {
-        filename: `Absensi_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
-        paperSize: 'A4-landscape',
-      });
-    } catch (err) {
-      console.error('Gagal export PDF absensi:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
   const handlePrint = async () => {
     await triggerPrintWithPdfFallback({
       getElement: () => attendancePrintRef.current,
@@ -796,14 +780,6 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                 >
                     <Users className="w-4 h-4" />
                     Karyawan
-                </button>
-                <button 
-                    onClick={handleDownloadPdf}
-                    disabled={isExportingPdf}
-                    className="flex-1 md:flex-none bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-3.5 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
-                >
-                    <FileDown className="w-4 h-4" />
-                    {isExportingPdf ? 'PDF...' : 'Download PDF'}
                 </button>
                 <button 
                     onClick={handlePrint}

@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { AppState, MaterialItem } from '../types';
-import { Plus, Trash2, Upload, Image as ImageIcon, X, Printer, Calendar, Archive, Download, MapPin, Edit2, FileDown } from 'lucide-react';
+import { Plus, Trash2, Upload, Image as ImageIcon, X, Printer, Calendar, Archive, Download, MapPin, Edit2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
   ALL_LOCATIONS_FILTER,
@@ -10,7 +10,7 @@ import {
   normalizeMaterialLocation,
   parseMaterialExcelRow,
 } from '../materialUtils';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface MaterialPageProps {
   state: AppState;
@@ -389,23 +389,7 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
     e.target.value = '';
   };
 
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const materialPrintRef = useRef<HTMLDivElement>(null);
-
-  const handleDownloadPdf = async () => {
-    if (!materialPrintRef.current || isExportingPdf) return;
-    setIsExportingPdf(true);
-    try {
-      await downloadElementAsPdf(materialPrintRef.current, {
-        filename: `Material_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`,
-        paperSize: 'A4-portrait',
-      });
-    } catch (err) {
-      console.error('Gagal export PDF material:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
 
   const handlePrint = async () => {
     await triggerPrintWithPdfFallback({
@@ -464,14 +448,6 @@ export const MaterialPage: React.FC<MaterialPageProps> = ({ state, onUpdate, onC
                 <span className="md:hidden">Import</span>
                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
             </label>
-            <button 
-              onClick={handleDownloadPdf}
-              disabled={isExportingPdf || visibleGroups.length === 0}
-              className="bg-accent-400 hover:bg-accent-500 disabled:opacity-50 text-brand-950 px-3 md:px-3.5 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors whitespace-nowrap"
-            >
-              <FileDown className="w-4 h-4 shrink-0" />
-              <span>{isExportingPdf ? 'PDF...' : 'Download PDF'}</span>
-            </button>
             <button 
               onClick={handlePrint}
               className="bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3 md:px-3.5 py-2.5 rounded-xl text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-colors whitespace-nowrap"

@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { AppState, CompanyProfile, Project, ProjectPeriod, IncomingFund, prepareStateForSync } from '../types';
-import { Save, Trash2, Calendar, Plus, Cloud, Copy, Download, Upload, FileJson, Printer, Edit2, X, FileDown } from 'lucide-react';
+import { Save, Trash2, Calendar, Plus, Cloud, Copy, Download, Upload, FileJson, Printer, Edit2, X } from 'lucide-react';
 import { ProjectReportPrint } from './ProjectReportPrint';
 import { useReactToPrint } from 'react-to-print';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { printReactIframeWithPdfFallback, triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface SettingsPageProps {
   state: AppState;
@@ -35,83 +35,51 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const printRef = useRef<HTMLDivElement>(null);
   const budgetRef = useRef<HTMLDivElement>(null);
   const [projectToPrint, setProjectToPrint] = useState<string | null>(null);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const projectToPrintRef = useRef<string | null>(null);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Laporan-Proyek`,
-    onAfterPrint: () => setProjectToPrint(null),
+    onAfterPrint: () => {
+      projectToPrintRef.current = null;
+      setProjectToPrint(null);
+    },
+    print: async (target) => {
+      const proj = state.projects.find(p => p.id === projectToPrintRef.current);
+      await printReactIframeWithPdfFallback(target, {
+        getElement: () => printRef.current,
+        pdfOptions: {
+          filename: `Laporan_Proyek_${proj?.name || 'Proyek'}`,
+          paperSize: 'A4-portrait',
+        },
+      });
+    },
   });
 
-  const isRunningInIframe = () => {
-    try {
-      return window.self !== window.top;
-    } catch {
-      return true;
-    }
-  };
-
-  const triggerDownloadProjectPdf = async (projectId: string) => {
-    if (isExportingPdf) return;
-    setIsExportingPdf(true);
-    try {
-      flushSync(() => {
-        setProjectToPrint(projectId);
-      });
-      const proj = state.projects.find(p => p.id === projectId);
-      await downloadElementAsPdf(printRef.current, {
-        filename: `Laporan_Proyek_${proj?.name || 'Proyek'}`,
-        paperSize: 'A4-portrait',
-      });
-    } catch (err) {
-      console.error('Gagal download PDF proyek:', err);
-    } finally {
-      setProjectToPrint(null);
-      setIsExportingPdf(false);
-    }
-  };
-
-  const triggerPrint = async (projectId: string) => {
+  const triggerPrint = (projectId: string) => {
+      projectToPrintRef.current = projectId;
       flushSync(() => {
           setProjectToPrint(projectId);
       });
-      if (isRunningInIframe()) {
-          await triggerDownloadProjectPdf(projectId);
-          return;
-      }
       handlePrint();
   };
   
   // Funds Print Ref
   const fundsPrintRef = useRef<HTMLDivElement>(null);
-  const handlePrintFundsReact = useReactToPrint({
+  const handlePrintFunds = useReactToPrint({
       contentRef: fundsPrintRef,
       documentTitle: `Rekap-Dana-Masuk`,
-  });
-
-  const handleDownloadFundsPdf = async () => {
-      if (!fundsPrintRef.current || isExportingPdf) return;
-      setIsExportingPdf(true);
-      try {
+      print: async (target) => {
           const proj = state.projects.find(p => p.id === managingFundsFor);
-          await downloadElementAsPdf(fundsPrintRef.current, {
-              filename: `Rekap_Dana_Masuk_${proj?.name || 'Proyek'}`,
-              paperSize: 'A4-portrait',
+          await printReactIframeWithPdfFallback(target, {
+              getElement: () => fundsPrintRef.current,
+              pdfOptions: {
+                  filename: `Rekap_Dana_Masuk_${proj?.name || 'Proyek'}`,
+                  paperSize: 'A4-portrait',
+              },
           });
-      } catch (err) {
-          console.error('Gagal download PDF dana masuk:', err);
-      } finally {
-          setIsExportingPdf(false);
-      }
-  };
-
-  const handlePrintFunds = async () => {
-      if (isRunningInIframe()) {
-          await handleDownloadFundsPdf();
-          return;
-      }
-      handlePrintFundsReact();
-  };
+      },
+  });
 
   const handlePrintBudget = async () => {
       await triggerPrintWithPdfFallback({
@@ -121,21 +89,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               paperSize: 'A4-portrait',
           },
       });
-  };
-
-  const handleDownloadBudgetPdf = async () => {
-      if (!budgetRef.current || isExportingPdf) return;
-      setIsExportingPdf(true);
-      try {
-          await downloadElementAsPdf(budgetRef.current, {
-              filename: 'Manajemen_Anggaran_Proyek',
-              paperSize: 'A4-portrait',
-          });
-      } catch (err) {
-          console.error('Gagal download PDF anggaran:', err);
-      } finally {
-          setIsExportingPdf(false);
-      }
   };
 
   // New Project State
@@ -719,25 +672,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white print:text-2xl print:mb-4 print:text-black">Manajemen Anggaran Proyek</h3>
             </div>
-            <div className="flex items-center gap-2 no-print">
-              <button 
-                  type="button"
-                  onClick={handleDownloadBudgetPdf}
-                  disabled={isExportingPdf}
-                  className="flex items-center gap-2 bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-3.5 py-2 rounded-lg text-sm font-bold transition-colors"
-              >
-                  <FileDown className="w-4 h-4" />
-                  {isExportingPdf ? 'Membuat...' : 'Download PDF'}
-              </button>
-              <button 
-                  type="button"
-                  onClick={handlePrintBudget}
-                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                  <Printer className="w-4 h-4" />
-                  Cetak
-              </button>
-            </div>
+            <button 
+                type="button"
+                onClick={handlePrintBudget}
+                className="no-print flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+                <Printer className="w-4 h-4" />
+                Cetak
+            </button>
         </div>
 
         <div className="overflow-x-auto print:overflow-visible">
@@ -842,25 +784,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                                     Rp {sisa.toLocaleString('id-ID')}
                                 </td>
                                 <td className="px-4 py-3 text-center print:hidden">
-                                    <div className="flex items-center justify-center gap-1">
-                                      <button 
-                                          type="button"
-                                          onClick={() => triggerDownloadProjectPdf(project.id)}
-                                          disabled={isExportingPdf}
-                                          className="text-brand-700 hover:text-brand-800 dark:text-accent-400 dark:hover:text-accent-300 p-1.5 border border-brand-200 dark:border-brand-800 rounded hover:bg-brand-50 dark:hover:bg-brand-900/30"
-                                          title="Download PDF Laporan Proyek"
-                                      >
-                                          <FileDown className="w-4 h-4" />
-                                      </button>
-                                      <button 
-                                          type="button"
-                                          onClick={() => triggerPrint(project.id)}
-                                          className="text-brand-700 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300 p-1.5 border border-brand-200 dark:border-brand-800 rounded hover:bg-brand-50 dark:hover:bg-brand-900/30"
-                                          title="Cetak Laporan Proyek"
-                                      >
-                                          <Printer className="w-4 h-4" />
-                                      </button>
-                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={() => triggerPrint(project.id)}
+                                        className="text-brand-700 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300 p-1.5 border border-brand-200 dark:border-brand-800 rounded hover:bg-brand-50 dark:hover:bg-brand-900/30"
+                                        title="Cetak Laporan Proyek"
+                                    >
+                                        <Printer className="w-4 h-4" />
+                                    </button>
                                 </td>
                             </tr>
                         );
@@ -956,16 +887,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                       <div className="flex items-center gap-2">
                           <button 
                               type="button"
-                              onClick={handleDownloadFundsPdf}
-                              disabled={isExportingPdf}
-                              className="flex items-center gap-1.5 bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
-                          >
-                              <FileDown className="w-4 h-4" />
-                              PDF
-                          </button>
-                          <button 
-                              type="button"
-                              onClick={handlePrintFunds}
+                              onClick={() => handlePrintFunds()}
                               className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                           >
                               <Printer className="w-4 h-4" />

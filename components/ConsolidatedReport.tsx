@@ -1,12 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { AppState, DailyAttendance } from '../types';
-import { Printer, ArrowLeft, Check, Layers, Sliders, CheckSquare, Square, Building2, Calendar, FileText, CreditCard, FileDown } from 'lucide-react';
+import { Printer, ArrowLeft, Check, Layers, Sliders, CheckSquare, Square, Building2, Calendar, FileText, CreditCard } from 'lucide-react';
 import { terbilang } from '../utils';
 import { AttendancePage } from './AttendancePage';
 import { PayrollPage } from './PayrollPage';
 import { MaterialPage } from './MaterialPage';
 import { InvoicePage } from './InvoicePage';
-import { downloadElementAsPdf, triggerPrintWithPdfFallback } from '../pdfUtils';
+import { triggerPrintWithPdfFallback } from '../pdfUtils';
 
 interface ConsolidatedReportProps {
   state: AppState;
@@ -30,7 +30,6 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
   const [includePayroll, setIncludePayroll] = useState(true);
   const [includeMaterials, setIncludeMaterials] = useState(true);
   const [includeInvoice, setIncludeInvoice] = useState(true);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const singlePageRef = useRef<HTMLDivElement>(null);
   const multiPageRef = useRef<HTMLDivElement>(null);
 
@@ -112,23 +111,6 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
 
   const getPdfFilename = () =>
     `Laporan_Terpadu_${currentProject?.name || 'Proyek'}_${currentPeriod?.name || ''}`;
-
-  const handleDownloadPdf = async () => {
-    const el = getActiveReportElement();
-    if (!el || isExportingPdf) return;
-    setIsExportingPdf(true);
-    try {
-      await downloadElementAsPdf(el, {
-        filename: getPdfFilename(),
-        paperSize: getMappedPaperSize(),
-        preferSinglePage: reportMode === 'single-page',
-      });
-    } catch (err) {
-      console.error('Gagal export PDF:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
 
   const handlePrint = async () => {
     await triggerPrintWithPdfFallback({
@@ -247,23 +229,13 @@ export const ConsolidatedReport: React.FC<ConsolidatedReportProps> = ({ state, o
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isExportingPdf}
-              className="flex-1 md:flex-none bg-accent-400 hover:bg-accent-500 disabled:opacity-60 text-brand-950 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
-            >
-              <FileDown className="w-4 h-4" />
-              {isExportingPdf ? 'Membuat PDF...' : 'Download PDF'}
-            </button>
-            <button
-              onClick={handlePrint}
-              className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20 active:scale-95"
-            >
-              <Printer className="w-4 h-4" />
-              Cetak 1 Lembar Sekarang
-            </button>
-          </div>
+          <button
+            onClick={handlePrint}
+            className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
+          >
+            <Printer className="w-4 h-4" />
+            Cetak 1 Lembar Sekarang
+          </button>
         </div>
 
         {/* Options Toolbar */}
