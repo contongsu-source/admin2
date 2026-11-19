@@ -39,21 +39,39 @@
     size: A4;
     margin: 10mm;
   }
-  body {
-    background: white !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    width: 100%;
+  html,
+  html.dark,
+  body,
+  html.dark body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    transition: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
   }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
+  .print-only-flex { display: flex !important; }
+  .pdf-force-show { display: block !important; }
+  .overflow-x-auto { overflow: visible !important; }
   .page-break { 
     page-break-before: always; 
     break-before: page;
     display: block;
   }
   
-  /* Reset max-widths for print to use full paper width if needed, or keep them constrained if design requires */
+  /* Reset max-widths for print to use full paper width if needed */
   .max-w-2xl {
     max-width: 100% !important;
   }
@@ -78,4 +96,31 @@
   ::-webkit-scrollbar {
     display: none;
   }
+}
+
+html.pdf-capturing *,
+html.pdf-capturing *::before,
+html.pdf-capturing *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+html.pdf-capturing .no-print {
+  display: none !important;
+}
+
+html.pdf-capturing .print-only {
+  display: block !important;
+}
+
+html.pdf-capturing .print-only-flex {
+  display: flex !important;
+}
+
+html.pdf-capturing .pdf-force-show {
+  display: block !important;
+}
+
+html.pdf-capturing .overflow-x-auto {
+  overflow: visible !important;
 }
