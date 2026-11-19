@@ -9,10 +9,11 @@ import { SettingsPage } from './components/SettingsPage';
 import { PettyCashPage } from './components/PettyCashPage';
 import { RABPage } from './components/RABPage';
 import { ConsolidatedReport } from './components/ConsolidatedReport';
+import { ProjectSummaryPage } from './components/ProjectSummaryPage';
 import { AppState, AttendanceRecord, MaterialItem, CompanyProfile, Project, ProjectPeriod, DailyAttendance, Employee, PettyCashTransaction, IncomingFund, RABItem, prepareStateForSync } from './types';
 import { INITIAL_STATE } from './constants';
 import { deepEqual } from './utils';
-import { Cloud, CheckCircle2, AlertCircle, LogIn } from 'lucide-react';
+import { Cloud, CheckCircle2, AlertCircle, LogIn, X } from 'lucide-react';
 import { auth, db, loginWithGoogle, logout } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, getDocFromServer } from 'firebase/firestore';
@@ -127,6 +128,40 @@ const App: React.FC = () => {
         if (!parsed.materials) parsed.materials = {};
         if (!parsed.pettyCash) parsed.pettyCash = {};
         if (!parsed.rab) parsed.rab = {};
+
+        // MIGRATION: Assign missing projectId to employees based on their first found attendance record
+        let needsUpdate = false;
+        parsed.employees = parsed.employees.map((emp: any) => {
+            if (!emp.projectId) {
+                needsUpdate = true;
+                let foundProjectId = parsed.currentProjectId || (parsed.projects.length > 0 ? parsed.projects[0].id : '');
+                // Find which project's period has this employee's attendance
+                for (const periodId of Object.keys(parsed.attendance)) {
+                    const period = parsed.periods.find((p: any) => p.id === periodId);
+                    const hasAttendance = parsed.attendance[periodId].some((r: any) => r.employeeId === emp.id);
+                    if (period && hasAttendance) {
+                        foundProjectId = period.projectId;
+                        break;
+                    }
+                }
+                return { ...emp, projectId: foundProjectId };
+            }
+            return emp;
+        });
+
+        // Ensure attendance records only exist in periods belonging to the employee's project
+        if (needsUpdate) {
+            Object.keys(parsed.attendance).forEach(periodId => {
+                const period = parsed.periods.find((p: any) => p.id === periodId);
+                if (period) {
+                    parsed.attendance[periodId] = parsed.attendance[periodId].filter((record: any) => {
+                        const emp = parsed.employees.find((e: any) => e.id === record.employeeId);
+                        return emp && emp.projectId === period.projectId;
+                    });
+                }
+            });
+        }
+
         return parsed;
       }
     } catch (e) {
@@ -183,11 +218,8 @@ const App: React.FC = () => {
 
             // Helper to find period for a date
             const findPeriodForDate = (dateStr: string) => {
-                const date = new Date(dateStr);
                 return projectPeriods.find(p => {
-                    const start = new Date(p.startDate);
-                    const end = new Date(p.endDate);
-                    return date >= start && date <= end;
+                    return dateStr >= p.startDate && dateStr <= p.endDate;
                 });
             };
 
@@ -241,6 +273,39 @@ const App: React.FC = () => {
                   if (!data.materials) data.materials = {};
                   if (!data.pettyCash) data.pettyCash = {};
                   
+                  // MIGRATION: Assign missing projectId to employees based on their first found attendance record
+                  let needsUpdate = false;
+                  data.employees = data.employees.map(emp => {
+                      if (!emp.projectId) {
+                          needsUpdate = true;
+                          let foundProjectId = data.currentProjectId || (data.projects.length > 0 ? data.projects[0].id : '');
+                          // Find which project's period has this employee's attendance
+                          for (const periodId of Object.keys(data.attendance)) {
+                              const period = data.periods.find(p => p.id === periodId);
+                              const hasAttendance = data.attendance[periodId].some(r => r.employeeId === emp.id);
+                              if (period && hasAttendance) {
+                                  foundProjectId = period.projectId;
+                                  break;
+                              }
+                          }
+                          return { ...emp, projectId: foundProjectId };
+                      }
+                      return emp;
+                  });
+
+                  // Ensure attendance records only exist in periods belonging to the employee's project
+                  if (needsUpdate) {
+                     Object.keys(data.attendance).forEach(periodId => {
+                         const period = data.periods.find(p => p.id === periodId);
+                         if (period) {
+                             data.attendance[periodId] = data.attendance[periodId].filter(record => {
+                                 const emp = data.employees.find(e => e.id === record.employeeId);
+                                 return emp && emp.projectId === period.projectId;
+                             });
+                         }
+                     });
+                  }
+                  
                   if (!deepEqual(lastCloudStateRef.current, data)) {
                       lastCloudStateRef.current = data;
                       setState(data);
@@ -283,7 +348,7 @@ const App: React.FC = () => {
         
         // Revert to idle after showing status
         setTimeout(() => setSyncStatus('idle'), 3000);
-    }, 2000); 
+    }, 500); 
 
     return () => clearTimeout(timer);
   }, [state, user, isAuthReady, isLoadingCloud]);
@@ -311,16 +376,8 @@ const App: React.FC = () => {
 
     // Helper to find period for a date
     const findPeriodForDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        // Reset time part to ensure accurate date comparison
-        date.setHours(0, 0, 0, 0);
-        
         return projectPeriods.find(p => {
-            const start = new Date(p.startDate);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(p.endDate);
-            end.setHours(23, 59, 59, 999);
-            return date >= start && date <= end;
+            return dateStr >= p.startDate && dateStr <= p.endDate;
         });
     };
 
@@ -692,7 +749,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard state={state} />;
+        return <Dashboard state={state} onChangeView={setCurrentView} />;
       case 'attendance':
         return <AttendancePage 
             state={state} 
@@ -702,15 +759,21 @@ const App: React.FC = () => {
             onDeleteEmployee={handleDeleteEmployee}
             onRemoveFromPeriod={handleRemoveEmployeeFromPeriod}
             onAddToPeriod={handleAddEmployeeToPeriod}
+            onChangeView={setCurrentView}
         />;
       case 'payroll':
         return <PayrollPage 
             state={state} 
             onUpdateEmployee={handleUpdateEmployee}
             onUpdateAttendance={handleUpdateAttendance}
+            onChangeView={setCurrentView}
         />;
       case 'materials':
-        return <MaterialPage state={state} onUpdate={handleUpdateMaterials} />;
+        return <MaterialPage 
+            state={state} 
+            onUpdate={handleUpdateMaterials} 
+            onChangeView={setCurrentView}
+        />;
       case 'petty_cash':
         return <PettyCashPage state={state} onUpdate={handleUpdatePettyCash} />;
       case 'rab':
@@ -718,7 +781,9 @@ const App: React.FC = () => {
       case 'invoice':
         return <InvoicePage state={state} onChangeView={setCurrentView} />;
       case 'consolidated_report':
-        return <ConsolidatedReport state={state} />;
+        return <ConsolidatedReport state={state} onChangeView={setCurrentView} />;
+      case 'project_summary':
+        return <ProjectSummaryPage state={state} onChangeView={setCurrentView} />;
       case 'settings':
         return <SettingsPage 
             state={state} 
@@ -736,6 +801,12 @@ const App: React.FC = () => {
     }
   };
 
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginId, setLoginId] = useState('');
+  const [loginPin, setLoginPin] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   const handlePeriodChange = (projectId: string, periodId: string) => {
       setState(prev => ({
           ...prev,
@@ -743,17 +814,35 @@ const App: React.FC = () => {
       }));
   };
 
-  const handleLogin = async () => {
-    try {
-      await loginWithGoogle();
-    } catch (error: any) {
-      console.error("Login failed", error);
-      if (error.code === 'auth/unauthorized-domain') {
-          alert("Domain ini belum diizinkan di Firebase. Silakan tambahkan domain ini ke Authorized Domains di Firebase Console (Authentication -> Settings -> Authorized domains).");
-      } else {
-          alert("Gagal login: " + error.message);
+  const handleLogin = () => {
+    setShowLoginModal(true);
+  };
+  
+  const submitLogin = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!loginId.trim() || !loginPin.trim()) {
+          setLoginError('ID dan PIN wajib diisi');
+          return;
       }
-    }
+      setIsLoggingIn(true);
+      setLoginError('');
+      try {
+          // Import loginWithId from firebase.ts dynamically or ensure it's imported at the top
+          const { loginWithId } = await import('./firebase');
+          await loginWithId(loginId, loginPin);
+          setShowLoginModal(false);
+          setLoginId('');
+          setLoginPin('');
+      } catch (error: any) {
+          console.error("Login failed", error);
+          if (error.code === 'auth/invalid-credential') {
+              setLoginError('ID atau PIN salah.');
+          } else {
+              setLoginError("Gagal login: " + error.message);
+          }
+      } finally {
+          setIsLoggingIn(false);
+      }
   };
 
   const handleLogout = async () => {
@@ -787,7 +876,7 @@ const App: React.FC = () => {
         <div className={`fixed bottom-4 right-4 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg rounded-full px-4 py-2 flex items-center gap-2 transition-all duration-300 z-50 no-print ${syncStatus === 'idle' ? 'opacity-0 translate-y-10' : 'opacity-100 translate-y-0'}`}>
             {syncStatus === 'syncing' && (
                 <>
-                    <Cloud className="w-4 h-4 text-blue-500 animate-pulse" />
+                    <Cloud className="w-4 h-4 text-brand-600 dark:text-accent-400 animate-pulse" />
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Sinkronisasi Cloud...</span>
                 </>
             )}
@@ -810,6 +899,71 @@ const App: React.FC = () => {
                 </>
             )}
         </div>
+        
+        {/* Login Modal */}
+        {showLoginModal && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <LogIn className="w-5 h-5 text-brand-500" /> Login Sistem
+                        </h2>
+                        <button 
+                            onClick={() => setShowLoginModal(false)}
+                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <form onSubmit={submitLogin} className="p-5 space-y-4">
+                        {loginError && (
+                            <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg flex gap-2 items-start">
+                                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                <p>{loginError}</p>
+                            </div>
+                        )}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Login ID
+                            </label>
+                            <input 
+                                type="text"
+                                value={loginId}
+                                onChange={e => setLoginId(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none text-gray-900 dark:text-white"
+                                placeholder="Contoh: admin123"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                PIN / Password
+                            </label>
+                            <input 
+                                type="password"
+                                value={loginPin}
+                                onChange={e => setLoginPin(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none text-gray-900 dark:text-white"
+                                placeholder="Masukkan PIN"
+                                required
+                            />
+                        </div>
+                        <div className="pt-2">
+                            <button 
+                                type="submit"
+                                disabled={isLoggingIn}
+                                className="w-full bg-brand-600 hover:bg-brand-700 text-white rounded-xl py-2.5 font-medium transition-colors shadow-sm disabled:opacity-70 flex items-center justify-center"
+                            >
+                                {isLoggingIn ? 'Memproses...' : 'Masuk'}
+                            </button>
+                            <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-3">
+                                Jika ID belum ada, sistem akan otomatis mendaftarkannya dengan PIN tersebut.
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
     </>
   );
 };

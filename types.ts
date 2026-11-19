@@ -33,6 +33,7 @@ export interface AttendanceRecord {
   days: Record<string, DailyAttendance>; // Keyed by date string
   dailyRate?: number; // Rate specific to this period
   overtimeRate?: number; // Overtime rate specific to this period
+  cashAdvance?: number; // Potongan bon/kasbon (Debt/Cash Advance)
 }
 
 export interface MaterialItem {
@@ -43,6 +44,7 @@ export interface MaterialItem {
   unit: string;
   unitPrice: number;
   totalPrice: number;
+  location?: string; // Nama tempat proyek
   notes?: string;
   receiptImage?: string; // Base64 or URL string
 }
@@ -117,7 +119,13 @@ export const prepareStateForSync = (state: AppState): AppState => {
   for (const periodId in state.materials) {
     syncState.materials[periodId] = state.materials[periodId].map(item => {
       const { receiptImage, ...rest } = item;
-      return rest;
+      const cleanItem: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rest)) {
+        if (v !== undefined) {
+          cleanItem[k] = v;
+        }
+      }
+      return cleanItem as MaterialItem;
     });
   }
   return syncState;

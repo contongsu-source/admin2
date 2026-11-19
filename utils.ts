@@ -22,19 +22,24 @@ export function terbilang(nilai: number): string {
   } else if (bilangan < 20) {
     temp = terbilang(bilangan - 10) + " Belas";
   } else if (bilangan < 100) {
-    temp = terbilang(Math.floor(bilangan / 10)) + " Puluh" + terbilang(bilangan % 10);
+    const sisa = bilangan % 10;
+    temp = terbilang(Math.floor(bilangan / 10)) + " Puluh" + (sisa ? " " + terbilang(sisa) : "");
   } else if (bilangan < 200) {
-    temp = " Seratus" + terbilang(bilangan - 100);
+    temp = " Seratus" + (bilangan - 100 ? " " + terbilang(bilangan - 100) : "");
   } else if (bilangan < 1000) {
-    temp = terbilang(Math.floor(bilangan / 100)) + " Ratus" + terbilang(bilangan % 100);
+    const sisa = bilangan % 100;
+    temp = terbilang(Math.floor(bilangan / 100)) + " Ratus" + (sisa ? " " + terbilang(sisa) : "");
   } else if (bilangan < 2000) {
-    temp = " Seribu" + terbilang(bilangan - 1000);
+    temp = " Seribu" + (bilangan - 1000 ? " " + terbilang(bilangan - 1000) : "");
   } else if (bilangan < 1000000) {
-    temp = terbilang(Math.floor(bilangan / 1000)) + " Ribu" + terbilang(bilangan % 1000);
+    const sisa = bilangan % 1000;
+    temp = terbilang(Math.floor(bilangan / 1000)) + " Ribu" + (sisa ? " " + terbilang(sisa) : "");
   } else if (bilangan < 1000000000) {
-    temp = terbilang(Math.floor(bilangan / 1000000)) + " Juta" + terbilang(bilangan % 1000000);
+    const sisa = bilangan % 1000000;
+    temp = terbilang(Math.floor(bilangan / 1000000)) + " Juta" + (sisa ? " " + terbilang(sisa) : "");
   } else if (bilangan < 1000000000000) {
-    temp = terbilang(Math.floor(bilangan / 1000000000)) + " Milyar" + terbilang(bilangan % 1000000000);
+    const sisa = bilangan % 1000000000;
+    temp = terbilang(Math.floor(bilangan / 1000000000)) + " Milyar" + (sisa ? " " + terbilang(sisa) : "");
   }
 
   return temp.trim();
